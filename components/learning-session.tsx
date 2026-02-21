@@ -1,0 +1,281 @@
+"use client"
+
+import { useState, useRef, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import { X, Eye, Check, ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import type { WordItem } from "@/lib/data"
+import { cn } from "@/lib/utils"
+
+type AnswerState = "idle" | "correct" | "incorrect"
+
+interface LearningSessionProps {
+  deckTitle: string
+  words: WordItem[]
+}
+
+export function LearningSession({ deckTitle, words }: LearningSessionProps) {
+  const router = useRouter()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [inputValue, setInputValue] = useState("")
+  const [answerState, setAnswerState] = useState<AnswerState>("idle")
+  const [showHint, setShowHint] = useState(false)
+  const [shake, setShake] = useState(false)
+  const [completedCount, setCompletedCount] = useState(0)
+  const [sessionComplete, setSessionComplete] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const [inputWidth, setInputWidth] = useState(80)
+
+  const currentWord = words[currentIndex]
+  const progressPercentage = Math.round((currentIndex / words.length) * 100)
+
+  // Auto-focus input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [currentIndex])
+
+  // Dynamic width based on input content
+  useEffect(() => {
+    if (spanRef.current) {
+      const width = Math.max(80, spanRef.current.offsetWidth + 24)
+      setInputWidth(width)
+    }
+  }, [inputValue])
+
+  const moveToNext = useCallback(() => {
+    if (currentIndex < words.length - 1) {
+      setCurrentIndex((prev) => prev + 1)
+      setInputValue("")
+      setAnswerState("idle")
+      setShowHint(false)
+      setShake(false)
+    } else {
+      setSessionComplete(true)
+    }
+  }, [currentIndex, words.length])
+
+  const handleSubmit = useCallback(() => {
+    if (!inputValue.trim()) return
+
+    const isCorrect =
+      inputValue.trim().toLowerCase() === currentWord.answer.toLowerCase()
+
+    if (isCorrect) {
+      setAnswerState("correct")
+      setCompletedCount((prev) => prev + 1)
+      // Auto-advance after a brief pause
+      setTimeout(() => {
+        moveToNext()
+      }, 800)
+    } else {
+      setAnswerState("incorrect")
+      setShake(true)
+      setTimeout(() => setShake(false), 500)
+    }
+  }, [inputValue, currentWord, moveToNext])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      if (answerState === "correct") {
+        moveToNext()
+      } else {
+        handleSubmit()
+      }
+    }
+  }
+
+  const handleShowHint = () => {
+    setShowHint(true)
+  }
+
+  const handleRetry = () => {
+    setInputValue("")
+    setAnswerState("idle")
+    setShowHint(false)
+    inputRef.current?.focus()
+  }
+
+  // Render the English sentence with the inline input
+  const renderSentence = () => {
+    const parts = currentWord.english.split("___")
+    if (parts.length < 2) return <span>{currentWord.english}</span>
+
+    return (
+      <span className="inline leading-relaxed">
+        <span className="text-foreground">{parts[0]}</span>
+        <span className="relative inline-block align-baseline">
+          {/* Hidden span for measuring text width */}
+          <span
+            ref={spanRef}
+            className="invisible absolute whitespace-pre text-2xl font-bold md:text-3xl"
+            aria-hidden="true"
+          >
+            {inputValue || currentWord.answer}
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(e) => {
+              if (answerState === "idle" || answerState === "incorrect") {
+                setInputValue(e.target.value)
+                if (answerState === "incorrect") {
+                  setAnswerState("idle")
+                }
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            disabled={answerState === "correct"}
+            className={cn(
+              "inline-block rounded-lg border-2 bg-card px-2 py-1 text-center text-2xl font-bold outline-none transition-all duration-200 md:text-3xl",
+              answerState === "idle" && "border-input focus:border-primary",
+              answerState === "correct" && "border-success bg-success/10 text-success",
+              answerState === "incorrect" && "border-destructive text-destructive",
+              shake && "animate-shake"
+            )}
+            style={{ width: `${inputWidth}px` }}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            aria-label="Type the missing word"
+          />
+        </span>
+        <span className="text-foreground">{parts[1]}</span>
+      </span>
+    )
+  }
+
+  if (sessionComplete) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className="flex size-20 items-center justify-center rounded-full bg-success/10">
+            <Check className="size-10 text-success" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold text-foreground font-[family-name:var(--font-heading)]">
+              Session Complete
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              You got {completedCount} out of {words.length} words correct!
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => router.push("/")}>
+              Back to Dashboard
+            </Button>
+            <Button
+              onClick={() => {
+                setCurrentIndex(0)
+                setInputValue("")
+                setAnswerState("idle")
+                setShowHint(false)
+                setCompletedCount(0)
+                setSessionComplete(false)
+              }}
+            >
+              Practice Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Minimalist Header */}
+      <header className="flex items-center justify-between px-4 py-3 md:px-8">
+        <div className="flex flex-1 items-center gap-4">
+          <Progress value={progressPercentage} className="h-1 max-w-xs" />
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {currentIndex + 1} / {words.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            {deckTitle}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/")}
+            aria-label="Exit session"
+          >
+            <X className="size-5" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex flex-1 flex-col items-center justify-center px-6">
+        <div className="flex w-full max-w-2xl flex-col items-center gap-10">
+          {/* Korean Guide */}
+          <p className="text-center text-base text-muted-foreground leading-relaxed md:text-lg">
+            {currentWord.korean.split(currentWord.koreanHighlight).map((part, i, arr) => (
+              <span key={i}>
+                {part}
+                {i < arr.length - 1 && (
+                  <strong className="font-bold text-foreground">
+                    {currentWord.koreanHighlight}
+                  </strong>
+                )}
+              </span>
+            ))}
+          </p>
+
+          {/* English Sentence with Input */}
+          <div className="text-center text-2xl font-medium text-foreground leading-relaxed md:text-3xl">
+            {renderSentence()}
+          </div>
+
+          {/* Feedback Area */}
+          <div className="flex min-h-[48px] flex-col items-center gap-3">
+            {answerState === "correct" && (
+              <div className="flex items-center gap-2 text-success animate-in fade-in duration-300">
+                <Check className="size-5" />
+                <span className="font-medium">Correct!</span>
+              </div>
+            )}
+
+            {answerState === "incorrect" && !showHint && (
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={handleShowHint}>
+                  <Eye className="size-4" />
+                  Show Hint
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleRetry}>
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {answerState === "incorrect" && showHint && (
+              <div className="flex flex-col items-center gap-3 animate-in fade-in duration-300">
+                <p className="text-sm text-muted-foreground">
+                  {"The answer is: "}
+                  <strong className="text-foreground">{currentWord.answer}</strong>
+                </p>
+                <Button size="sm" onClick={moveToNext} className="gap-1.5">
+                  Next Word
+                  <ArrowRight className="size-3.5" />
+                </Button>
+              </div>
+            )}
+
+            {answerState === "idle" && (
+              <p className="text-xs text-muted-foreground">
+                Type the word and press Enter
+              </p>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

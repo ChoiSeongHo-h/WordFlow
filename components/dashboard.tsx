@@ -1,14 +1,45 @@
 "use client"
 
-import { Flame, Zap, TrendingUp, ArrowRight } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Flame, Zap, TrendingUp, ArrowRight, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CircularProgress } from "@/components/circular-progress"
 import { DeckCard } from "@/components/deck-card"
-import { decks, userProgress } from "@/lib/data"
+import { getDecks, getUserProgress, type Deck, type UserProgress } from "@/lib/api"
 
 export function Dashboard() {
+  const [decks, setDecks] = useState<Deck[]>([])
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [decksData, progressData] = await Promise.all([
+          getDecks(),
+          getUserProgress()
+        ])
+        setDecks(decksData)
+        setUserProgress(progressData)
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  if (isLoading || !userProgress) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -55,12 +86,14 @@ export function Dashboard() {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {"You're doing great! Keep going to reach today's goal and maintain your streak."}
                 </p>
-                <Link href={`/learn/${decks[0].id}`}>
-                  <Button size="lg" className="mt-1 gap-2">
-                    Start Learning Now
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
+                {decks.length > 0 && (
+                  <Link href={`/learn/${decks[0].id}`}>
+                    <Button size="lg" className="mt-1 gap-2">
+                      Start Learning Now
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -83,7 +116,7 @@ export function Dashboard() {
                   <div
                     key={i}
                     className={`h-2 flex-1 rounded-full ${
-                      i < userProgress.streak
+                      i < (userProgress?.streak || 0)
                         ? "bg-primary"
                         : "bg-muted"
                     }`}

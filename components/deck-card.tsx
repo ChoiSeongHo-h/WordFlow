@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Briefcase, GraduationCap, MessageCircle, BookOpen } from "lucide-react"
-import type { Deck } from "@/lib/data"
+import type { Deck } from "@/lib/api"
 
 const iconMap: Record<string, React.ReactNode> = {
   briefcase: <Briefcase className="size-5" />,

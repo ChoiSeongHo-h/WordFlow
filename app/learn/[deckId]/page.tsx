@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { decks } from "@/lib/data"
+import { getDeckById } from "@/lib/api"
 import { LearningSession } from "@/components/learning-session"
 
 interface LearnPageProps {
@@ -9,7 +9,7 @@ interface LearnPageProps {
 export default async function LearnPage({ params }: LearnPageProps) {
   const { deckId } = await params
 
-  const deck = decks.find((d) => d.id === deckId)
+  const deck = await getDeckById(deckId)
 
   if (!deck) {
     notFound()

@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { X, Eye, Check, ArrowRight } from "lucide-react"
+import { X, Eye, Check, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import type { WordItem } from "@/lib/data"
+import type { WordItem } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { verifyAnswer } from "@/lib/api"
 
 type AnswerState = "idle" | "correct" | "incorrect"
 
@@ -24,6 +25,8 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
   const [shake, setShake] = useState(false)
   const [completedCount, setCompletedCount] = useState(0)
   const [sessionComplete, setSessionComplete] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
+  
   const inputRef = useRef<HTMLInputElement>(null)
   const spanRef = useRef<HTMLSpanElement>(null)
   const [inputWidth, setInputWidth] = useState(80)
@@ -59,25 +62,30 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
     }
   }, [currentIndex, words.length])
 
-  const handleSubmit = useCallback(() => {
-    if (!inputValue.trim()) return
+  const handleSubmit = useCallback(async () => {
+    if (!inputValue.trim() || isValidating) return
 
-    const isCorrect =
-      inputValue.trim().toLowerCase() === currentWord.answer.toLowerCase()
-
-    if (isCorrect) {
-      setAnswerState("correct")
-      setCompletedCount((prev) => prev + 1)
-      // Auto-advance after a brief pause
-      setTimeout(() => {
-        moveToNext()
-      }, 800)
-    } else {
-      setAnswerState("incorrect")
-      setShake(true)
-      setTimeout(() => setShake(false), 500)
+    setIsValidating(true)
+    try {
+      const result = await verifyAnswer(currentWord.id, inputValue.trim())
+      
+      if (result.isCorrect) {
+        setAnswerState("correct")
+        setCompletedCount((prev) => prev + 1)
+        setTimeout(() => {
+          moveToNext()
+        }, 800)
+      } else {
+        setAnswerState("incorrect")
+        setShake(true)
+        setTimeout(() => setShake(false), 500)
+      }
+    } catch (error) {
+      console.error("Verification failed", error)
+    } finally {
+      setIsValidating(false)
     }
-  }, [inputValue, currentWord, moveToNext])
+  }, [inputValue, currentWord.id, isValidating, moveToNext])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -109,12 +117,7 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
       <span className="inline leading-relaxed">
         <span className="text-foreground">{parts[0]}</span>
         <span className="relative inline-block align-baseline">
-          {/* Hidden span for measuring text width */}
-          <span
-            ref={spanRef}
-            className="invisible absolute whitespace-pre text-2xl font-bold md:text-3xl"
-            aria-hidden="true"
-          >
+          <span ref={spanRef} className="invisible absolute whitespace-pre text-2xl font-bold md:text-3xl" aria-hidden="true">
             {inputValue || currentWord.answer}
           </span>
           <input
@@ -124,26 +127,27 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
             onChange={(e) => {
               if (answerState === "idle" || answerState === "incorrect") {
                 setInputValue(e.target.value)
-                if (answerState === "incorrect") {
-                  setAnswerState("idle")
-                }
+                if (answerState === "incorrect") setAnswerState("idle")
               }
             }}
             onKeyDown={handleKeyDown}
-            disabled={answerState === "correct"}
+            disabled={answerState === "correct" || isValidating}
             className={cn(
               "inline-block rounded-lg border-2 bg-card px-2 py-1 text-center text-2xl font-bold outline-none transition-all duration-200 md:text-3xl",
               answerState === "idle" && "border-input focus:border-primary",
               answerState === "correct" && "border-success bg-success/10 text-success",
               answerState === "incorrect" && "border-destructive text-destructive",
+              isValidating && "opacity-70",
               shake && "animate-shake"
             )}
             style={{ width: `${inputWidth}px` }}
             autoComplete="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            aria-label="Type the missing word"
           />
+          {isValidating && (
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2">
+              <Loader2 className="size-5 animate-spin text-primary" />
+            </div>
+          )}
         </span>
         <span className="text-foreground">{parts[1]}</span>
       </span>

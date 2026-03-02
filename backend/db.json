@@ -236,7 +236,7 @@
   "userProgress": {
     "dailyGoal": 20,
     "dailyCompleted": 14,
-    "streak": 7,
+    "streak": 5,
     "totalWordsLearned": 35,
     "totalWords": 95
   },
@@ -245,6 +245,46 @@
     "deckTitle": "Business English",
     "totalQuestions": 10,
     "words": [
+      {
+        "id": "be-1",
+        "korean": "우리는 분기별 보고서를 \"제출해야\" 합니다.",
+        "koreanHighlight": "제출해야",
+        "english": "We need to ___ the quarterly report.",
+        "answer": "submit",
+        "blankIndex": 4
+      },
+      {
+        "id": "be-2",
+        "korean": "그녀는 회의를 다음 주로 \"연기했다.\"",
+        "koreanHighlight": "연기했다",
+        "english": "She ___ the meeting to next week.",
+        "answer": "postponed",
+        "blankIndex": 1
+      },
+      {
+        "id": "be-6",
+        "korean": "그들은 계약 조건을 \"협상했다.\"",
+        "koreanHighlight": "협상했다",
+        "english": "They ___ the terms of the contract.",
+        "answer": "negotiated",
+        "blankIndex": 1
+      },
+      {
+        "id": "be-3",
+        "korean": "매니저가 새로운 정책을 \"시행했다.\"",
+        "koreanHighlight": "시행했다",
+        "english": "The manager ___ a new policy.",
+        "answer": "implemented",
+        "blankIndex": 2
+      },
+      {
+        "id": "be-5",
+        "korean": "그는 프로젝트의 \"마감일\"을 지켰다.",
+        "koreanHighlight": "마감일",
+        "english": "He met the project ___.",
+        "answer": "deadline",
+        "blankIndex": 4
+      },
       {
         "id": "be-4",
         "korean": "우리 팀은 매출을 20% \"증가시켰다.\"",
@@ -270,63 +310,23 @@
         "blankIndex": 2
       },
       {
-        "id": "be-2",
-        "korean": "그녀는 회의를 다음 주로 \"연기했다.\"",
-        "koreanHighlight": "연기했다",
-        "english": "She ___ the meeting to next week.",
-        "answer": "postponed",
-        "blankIndex": 1
+        "id": "be-4",
+        "korean": "우리 팀은 매출을 20% \"증가시켰다.\"",
+        "koreanHighlight": "증가시켰다",
+        "english": "Our team ___ sales by 20 percent.",
+        "answer": "increased",
+        "blankIndex": 2
       },
       {
-        "id": "be-6",
-        "korean": "그들은 계약 조건을 \"협상했다.\"",
-        "koreanHighlight": "협상했다",
-        "english": "They ___ the terms of the contract.",
-        "answer": "negotiated",
-        "blankIndex": 1
-      },
-      {
-        "id": "be-5",
-        "korean": "그는 프로젝트의 \"마감일\"을 지켰다.",
-        "koreanHighlight": "마감일",
-        "english": "He met the project ___.",
-        "answer": "deadline",
-        "blankIndex": 4
-      },
-      {
-        "id": "be-5",
-        "korean": "그는 프로젝트의 \"마감일\"을 지켰다.",
-        "koreanHighlight": "마감일",
-        "english": "He met the project ___.",
-        "answer": "deadline",
-        "blankIndex": 4
-      },
-      {
-        "id": "be-1",
-        "korean": "우리는 분기별 보고서를 \"제출해야\" 합니다.",
-        "koreanHighlight": "제출해야",
-        "english": "We need to ___ the quarterly report.",
-        "answer": "submit",
-        "blankIndex": 4
-      },
-      {
-        "id": "be-5",
-        "korean": "그는 프로젝트의 \"마감일\"을 지켰다.",
-        "koreanHighlight": "마감일",
-        "english": "He met the project ___.",
-        "answer": "deadline",
-        "blankIndex": 4
-      },
-      {
-        "id": "be-3",
-        "korean": "매니저가 새로운 정책을 \"시행했다.\"",
-        "koreanHighlight": "시행했다",
-        "english": "The manager ___ a new policy.",
-        "answer": "implemented",
+        "id": "be-4",
+        "korean": "우리 팀은 매출을 20% \"증가시켰다.\"",
+        "koreanHighlight": "증가시켰다",
+        "english": "Our team ___ sales by 20 percent.",
+        "answer": "increased",
         "blankIndex": 2
       }
     ],
-    "startedAt": "2026-03-02T08:05:12.749Z"
+    "startedAt": "2026-03-02T09:07:58.843Z"
   },
   "users": [
     {

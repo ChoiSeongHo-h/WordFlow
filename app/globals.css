@@ -127,16 +127,32 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased; /* Improved text rendering */
   }
 }
 
+/* GPU-accelerated shake animation for 60fps performance without layout shifting */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 
 .animate-shake {
-  animation: shake 0.5s ease-in-out;
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  transform: translate3d(0, 0, 0); /* Force hardware acceleration */
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Spring physics ceremony for correct answers */
+@keyframes spring-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); color: var(--success); text-shadow: 0 0 12px rgba(46, 204, 113, 0.4); }
+  100% { transform: scale(1); color: var(--success); }
+}
+
+.animate-spring-pop {
+  animation: spring-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }

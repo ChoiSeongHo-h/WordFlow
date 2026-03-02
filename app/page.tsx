@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { DeckCard } from "@/components/deck-card"
 import { AchievementCard } from "@/components/dashboard/achievement-card"
 import { getDecks, getUserProgress, type Deck, type UserProgress } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
 const LOCAL_STORAGE_KEY = "wordflow-daily-goal"
 const DEFAULT_GOAL = 20
@@ -94,14 +95,14 @@ export default function DashboardPage() {
             firstDeckId={decks.length > 0 ? decks[0].id : undefined}
           />
 
-          {/* Streak Status Card */}
-          <Card className="border-none shadow-md bg-card/50">
+          {/* Streak Status Card - Redesigned for "Desire to Fill" */}
+          <Card className="border-border/30 shadow-sm bg-card/40 hover:bg-card/60 transition-colors backdrop-blur-sm">
             <CardContent className="flex h-full flex-col justify-between gap-6 p-6">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Momentum</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Current Flow</p>
                 <div className="mt-4 flex items-baseline gap-2">
-                  <Flame className="size-9 text-orange-500 fill-orange-500" />
-                  <span className="text-5xl font-black text-foreground font-[family-name:var(--font-heading)]">
+                  <Flame className="size-8 text-orange-500 fill-orange-500 animate-pulse" style={{ animationDuration: '3s' }} />
+                  <span className="text-5xl font-black text-foreground font-[family-name:var(--font-heading)] tracking-tighter">
                     {userProgress.streak}
                   </span>
                   <span className="text-sm font-medium text-muted-foreground">days</span>
@@ -109,21 +110,29 @@ export default function DashboardPage() {
               </div>
               
               <div className="space-y-3">
-                <div className="flex gap-1.5">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-2.5 flex-1 rounded-full transition-all duration-500 ${
-                        i < (userProgress?.streak || 0)
-                          ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]"
-                          : "bg-muted"
-                      }`}
-                    />
-                  ))}
+                {/* Continuous visual blocks representing a week to trigger completion desire */}
+                <div className="flex gap-1.5 p-1.5 rounded-full bg-muted/50 border border-border/50">
+                  {Array.from({ length: 7 }).map((_, i) => {
+                    const isCompleted = i < (userProgress?.streak || 0);
+                    const isToday = i === (userProgress?.streak || 0) - 1;
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          "h-3 flex-1 rounded-full transition-all duration-700",
+                          isCompleted ? "bg-orange-500" : "bg-muted-foreground/15",
+                          isToday && "shadow-[0_0_12px_rgba(249,115,22,0.6)] scale-105" // Glow effect for current streak day
+                        )}
+                      />
+                    );
+                  })}
                 </div>
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <TrendingUp className="size-3.5 text-emerald-500" />
-                  <span>Personal Best: 14 days</span>
+                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <TrendingUp className="size-3.5 text-orange-500" />
+                    Personal Best: 14
+                  </span>
+                  <span className="text-muted-foreground/50">Keep pushing</span>
                 </div>
               </div>
             </CardContent>

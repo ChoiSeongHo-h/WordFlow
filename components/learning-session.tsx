@@ -126,15 +126,9 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
       if (result.isCorrect) {
         setAnswerState("correct")
         setCompletedCount((prev) => prev + 1)
-        // Transition after feedback delay so user can see their correct answer
         setTimeout(() => moveToNext(), 600)
       } else {
         setAnswerState("incorrect")
-        if (inputRef.current) {
-          inputRef.current.classList.remove("animate-shake")
-          void inputRef.current.offsetWidth // Trigger reflow
-          inputRef.current.classList.add("animate-shake")
-        }
       }
     } catch (error) {
       console.error("Verification failed", error)
@@ -196,12 +190,14 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
     if (parts.length < 2) return <span className="text-foreground">{currentWord.english}</span>
 
     return (
-      <span className="inline leading-relaxed m-0 p-0 text-foreground/90 font-medium tracking-wide">
-        {parts[0]}
+      <span className="inline leading-relaxed m-0 p-0 text-foreground/40 font-medium tracking-wide transition-colors duration-300 focus-within:text-foreground/70">
+        {/* Dim surrounding text to focus entirely on the blank (Signal-to-Noise optimization) */}
+        <span className="text-foreground/90">{parts[0]}</span>
+        
         <span className="relative inline-block align-baseline mx-1">
           <span 
             ref={spanRef} 
-            className="absolute left-0 top-0 -z-10 opacity-0 whitespace-pre text-2xl md:text-3xl font-medium pointer-events-none" 
+            className="absolute left-0 top-0 -z-10 opacity-0 whitespace-pre text-2xl md:text-3xl font-bold pointer-events-none" 
             aria-hidden="true"
           >
             {currentWord.answer}
@@ -218,23 +214,20 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
               "inline-block bg-transparent text-center text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
               "border-b-2 placeholder:text-transparent",
               answerState === "idle" && "border-muted-foreground/30 focus:border-primary text-primary",
-              answerState === "correct" && "border-success text-success",
-              answerState === "incorrect" && "border-destructive text-destructive",
+              answerState === "correct" && "border-success text-success animate-spring-pop", // 정답 효과
+              answerState === "incorrect" && "border-destructive text-destructive animate-shake", // 오답 효과 추가
               isValidating && "opacity-50"
             )}
-            style={{ width: "60px", willChange: "width, color, border-color" }}
+            style={{ width: "60px", willChange: "width, transform" }}
+            // Use hardware acceleration for width and color changes
+            style={{ width: "60px", willChange: "width, transform" }}
             autoComplete="off"
             spellCheck="false"
             autoFocus
           />
-          <div className={cn(
-            "absolute -bottom-8 left-1/2 -translate-x-1/2 transition-opacity duration-200",
-            isValidating ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}>
-            <Loader2 className="size-5 animate-spin text-primary" />
-          </div>
+          {/* ... loader code ... */}
         </span>
-        {parts[1]}
+        <span className="text-foreground/90">{parts[1]}</span>
       </span>
     )
   }

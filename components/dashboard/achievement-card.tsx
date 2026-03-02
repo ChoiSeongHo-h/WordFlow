@@ -1,13 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation" // useRouter 추가
+import { useRouter } from "next/navigation"
 import { ArrowRight, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CircularProgress } from "@/components/circular-progress"
 import { DailyGoalSetter } from "./daily-goal-setter"
-import { startSession } from "@/lib/api" // startSession 추가
+import { startSession } from "@/lib/api"
 
 interface AchievementCardProps {
   dailyCompleted: number

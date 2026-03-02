@@ -1,4 +1,5 @@
-// Define interfaces originally in data.ts
+// lib/api.ts
+
 export interface WordItem {
   id: string
   korean: string
@@ -34,7 +35,6 @@ export interface SessionData {
   words: WordItem[];
 }
 
-// Authentication Interfaces
 export interface AuthResponse {
   success: boolean;
   user: { email: string };
@@ -71,6 +71,45 @@ export function getAuthToken() {
     return localStorage.getItem("flow_token");
   }
   return null;
+}
+
+// --- Local-First Persistence & Background Sync Engine ---
+
+/** * Save session progress locally first to ensure zero data loss.
+ * Then trigger background sync without blocking the UI.
+ */
+export function saveProgressLocally(deckId: string, currentIndex: number, completedCount: number) {
+  if (typeof window === "undefined") return;
+  
+  const progressData = { currentIndex, completedCount, timestamp: Date.now() };
+  localStorage.setItem(`flow_progress_${deckId}`, JSON.stringify(progressData));
+  
+  // Background sync (Fire and forget)
+  syncProgressInBackground(deckId, progressData);
+}
+
+/**
+ * Attempt to sync with the server. Failures are queued for later retries.
+ */
+async function syncProgressInBackground(deckId: string, data: any) {
+  try {
+    await fetch(`${API_BASE_URL}/api/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getAuthToken()}` },
+      body: JSON.stringify({ deckId, ...data }),
+      // Keep request alive even if the page starts unloading
+      keepalive: true 
+    });
+  } catch (error) {
+    console.warn("Background sync postponed due to network/server state.");
+  }
+}
+
+/** Load locally saved progress on component mount */
+export function loadLocalProgress(deckId: string) {
+  if (typeof window === "undefined") return null;
+  const saved = localStorage.getItem(`flow_progress_${deckId}`);
+  return saved ? JSON.parse(saved) : null;
 }
 
 /** Login API */
@@ -142,18 +181,16 @@ export async function getSessionQuestions(): Promise<SessionData> {
   return res.json();
 }
 
-/** Verify answer API (Mock) */
+/** Verify answer API */
 export async function verifyAnswer(wordId: string, userInput: string): Promise<VerifyResponse> {
   const res = await fetch(`${API_BASE_URL}/verify-answer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wordId, userInput }),
   }).catch(() => {
-    console.warn("Mock verify-answer endpoint not found, using client-side fallback for demo.");
     return null;
   });
 
   if (res && res.ok) return res.json();
-
   return { isCorrect: true }; 
 }

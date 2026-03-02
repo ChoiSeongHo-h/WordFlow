@@ -9,7 +9,29 @@ import type { WordItem } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { verifyAnswer, saveProgressLocally, loadLocalProgress } from "@/lib/api"
 
-type AnswerState = "idle" | "correct" | "incorrect"
+/**
+ * Custom hook to handle global keyboard shortcuts.
+ */
+export function useKeyboardShortcut(key: string, callback: () => void, disabled: boolean = false) {
+  useEffect(() => {
+    if (disabled) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === key) {
+        // Execute global shortcut if not in an input, or if it's Escape
+        if (event.target instanceof HTMLInputElement && key !== "Escape") {
+          return
+        }
+        
+        event.preventDefault()
+        callback()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [key, callback, disabled])
+}
 
 interface LearningSessionProps {
   deckId: string
@@ -17,10 +39,11 @@ interface LearningSessionProps {
   initialWords: WordItem[]
 }
 
+type AnswerState = "idle" | "correct" | "incorrect"
+
 export function LearningSession({ deckId, deckTitle, initialWords: words }: LearningSessionProps) {
   const router = useRouter()
   
-  // UI structural states
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answerState, setAnswerState] = useState<AnswerState>("idle")
   const [showHint, setShowHint] = useState(false)
@@ -28,114 +51,157 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
   const [sessionComplete, setSessionComplete] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   
-  // Direct DOM refs for zero-latency performance
   const inputRef = useRef<HTMLInputElement>(null)
   const spanRef = useRef<HTMLSpanElement>(null)
-  const formRef = useRef<HTMLFormElement>(null)
 
   const currentWord = words[currentIndex]
   const progressPercentage = Math.round((currentIndex / words.length) * 100)
 
   // 1. Initialize local progress on mount
   useEffect(() => {
-    const saved = loadLocalProgress(deckId);
+    const saved = loadLocalProgress(deckId)
     if (saved && saved.currentIndex < words.length) {
-      setCurrentIndex(saved.currentIndex);
-      setCompletedCount(saved.completedCount);
+      setCurrentIndex(saved.currentIndex)
+      setCompletedCount(saved.completedCount)
     }
-  }, [deckId, words.length]);
+  }, [deckId, words.length])
 
-  // 2. Sync input state on word change
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.value = "";
-      inputRef.current.focus();
-      updateInputWidth("");
-    }
-  }, [currentIndex]);
-
-  // 3. Zero-Latency Width Calculation (Direct DOM Access)
+  // 2. Zero-Latency Width Calculation
   const updateInputWidth = useCallback((value: string) => {
     if (spanRef.current && inputRef.current) {
-      spanRef.current.textContent = value || currentWord?.answer || "";
-      const width = Math.max(80, spanRef.current.offsetWidth + 24);
-      inputRef.current.style.width = `${width}px`;
+      // Use current input value or current word answer for width baseline
+      spanRef.current.textContent = value || currentWord?.answer || ""
+      const width = Math.max(60, spanRef.current.offsetWidth + 16)
+      inputRef.current.style.width = `${width}px`
     }
-  }, [currentWord]);
+  }, [currentWord])
+
+  // 3. Reset Input and Focus Management
+  // Only clear input when the word actually changes (currentIndex changes)
+  useEffect(() => {
+    if (!sessionComplete && inputRef.current) {
+      inputRef.current.value = ""
+      updateInputWidth("")
+    }
+  }, [currentIndex, sessionComplete, updateInputWidth])
+
+  // Handle auto-focus separately to avoid clearing input during validation
+  useEffect(() => {
+    if (!sessionComplete && !isValidating && answerState !== "correct") {
+      inputRef.current?.focus()
+    }
+  }, [currentIndex, isValidating, answerState, sessionComplete])
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    updateInputWidth(val);
+    const val = e.target.value
+    updateInputWidth(val)
     
-    // Immediate visual reset of error state
     if (answerState === "incorrect") {
-      setAnswerState("idle");
+      setAnswerState("idle")
+      setShowHint(false)
     }
-  }, [answerState, updateInputWidth]);
+  }, [answerState, updateInputWidth])
 
   const moveToNext = useCallback(() => {
     if (currentIndex < words.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex);
-      setAnswerState("idle");
-      setShowHint(false);
-      saveProgressLocally(deckId, nextIndex, completedCount);
+      const nextIndex = currentIndex + 1
+      setCurrentIndex(nextIndex)
+      setAnswerState("idle")
+      setShowHint(false)
+      saveProgressLocally(deckId, nextIndex, completedCount)
     } else {
-      setSessionComplete(true);
-      saveProgressLocally(deckId, 0, 0); // Reset for next time
+      setSessionComplete(true)
+      saveProgressLocally(deckId, 0, 0)
     }
-  }, [currentIndex, words.length, deckId, completedCount]);
+  }, [currentIndex, words.length, deckId, completedCount])
 
-  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const inputValue = inputRef.current?.value.trim() || "";
-    if (!inputValue || isValidating) return;
+  const handleSubmit = useCallback(async () => {
+    const inputValue = inputRef.current?.value.trim() || ""
+    if (!inputValue || isValidating || answerState === "correct") return
 
-    setIsValidating(true);
+    setIsValidating(true)
     try {
-      const result = await verifyAnswer(currentWord.id, inputValue);
+      const result = await verifyAnswer(currentWord.id, inputValue)
       
       if (result.isCorrect) {
-        setAnswerState("correct");
-        setCompletedCount((prev) => prev + 1);
-        setTimeout(() => moveToNext(), 600);
+        setAnswerState("correct")
+        setCompletedCount((prev) => prev + 1)
+        // Transition after feedback delay so user can see their correct answer
+        setTimeout(() => moveToNext(), 600)
       } else {
-        setAnswerState("incorrect");
-        // Trigger hardware-accelerated shake animation
+        setAnswerState("incorrect")
         if (inputRef.current) {
-          inputRef.current.classList.remove("animate-shake");
-          void inputRef.current.offsetWidth; // Reflow trigger
-          inputRef.current.classList.add("animate-shake");
+          inputRef.current.classList.remove("animate-shake")
+          void inputRef.current.offsetWidth // Trigger reflow
+          inputRef.current.classList.add("animate-shake")
         }
       }
     } catch (error) {
-      console.error("Verification failed", error);
+      console.error("Verification failed", error)
     } finally {
-      setIsValidating(false);
+      setIsValidating(false)
     }
-  }, [currentWord.id, isValidating, moveToNext]);
+  }, [currentWord?.id, isValidating, answerState, moveToNext])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      e.preventDefault();
-      if (answerState === "correct") moveToNext();
-      else handleSubmit();
+      e.preventDefault()
+      if (isValidating) return
+
+      if (answerState === "correct") {
+        // Already moving via setTimeout, but allow manual skip
+        moveToNext()
+      } else if (answerState === "incorrect") {
+        if (showHint) {
+          moveToNext()
+        } else {
+          setShowHint(true)
+        }
+      } else {
+        handleSubmit()
+      }
     }
-  };
+  }
+
+  useKeyboardShortcut("Escape", () => {
+    router.push("/")
+  })
+
+  const handleGlobalEnter = useCallback(() => {
+    if (sessionComplete) {
+      setCurrentIndex(0)
+      setAnswerState("idle")
+      setSessionComplete(false)
+      setCompletedCount(0)
+    } else if (answerState === "incorrect") {
+      if (showHint) moveToNext()
+      else setShowHint(true)
+    }
+  }, [sessionComplete, answerState, showHint, moveToNext])
+
+  useKeyboardShortcut("Enter", handleGlobalEnter)
+
+  const handleBlur = useCallback(() => {
+    // Keep focus unless the session is over or a hint is being shown
+    if (!sessionComplete && !isValidating && !showHint && answerState !== "correct") {
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 10)
+    }
+  }, [sessionComplete, isValidating, showHint, answerState])
 
   const renderSentence = () => {
     if (!currentWord) return null
     const parts = currentWord.english.split("___")
-    if (parts.length < 2) return <span>{currentWord.english}</span>
+    if (parts.length < 2) return <span className="text-foreground">{currentWord.english}</span>
 
     return (
-      <form onSubmit={handleSubmit} ref={formRef} className="inline leading-relaxed m-0 p-0">
-        <span className="text-foreground">{parts[0]}</span>
-        <span className="relative inline-block align-baseline">
-          {/* Measurement Span: Hidden from UI, used to calculate input width */}
+      <span className="inline leading-relaxed m-0 p-0 text-foreground/90 font-medium tracking-wide">
+        {parts[0]}
+        <span className="relative inline-block align-baseline mx-1">
           <span 
             ref={spanRef} 
-            className="absolute left-0 top-0 -z-10 opacity-0 whitespace-pre text-2xl font-bold md:text-3xl pointer-events-none" 
+            className="absolute left-0 top-0 -z-10 opacity-0 whitespace-pre text-2xl md:text-3xl font-medium pointer-events-none" 
             aria-hidden="true"
           >
             {currentWord.answer}
@@ -145,19 +211,22 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
             type="text"
             onChange={handleInput}
             onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             disabled={answerState === "correct" || isValidating}
+            aria-label="Fill in the blank"
             className={cn(
-              "inline-block rounded-lg border-2 bg-card px-2 py-1 text-center text-2xl font-bold outline-none transition-colors duration-200 md:text-3xl",
-              answerState === "idle" && "border-input focus:border-primary",
-              answerState === "correct" && "border-success bg-success/10 text-success",
+              "inline-block bg-transparent text-center text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
+              "border-b-2 placeholder:text-transparent",
+              answerState === "idle" && "border-muted-foreground/30 focus:border-primary text-primary",
+              answerState === "correct" && "border-success text-success",
               answerState === "incorrect" && "border-destructive text-destructive",
-              isValidating && "opacity-70"
+              isValidating && "opacity-50"
             )}
-            style={{ width: "80px", willChange: "width, transform, background-color" }}
+            style={{ width: "60px", willChange: "width, color, border-color" }}
             autoComplete="off"
             spellCheck="false"
+            autoFocus
           />
-          {/* Layout-stable loader space */}
           <div className={cn(
             "absolute -bottom-8 left-1/2 -translate-x-1/2 transition-opacity duration-200",
             isValidating ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -165,21 +234,21 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
             <Loader2 className="size-5 animate-spin text-primary" />
           </div>
         </span>
-        <span className="text-foreground">{parts[1]}</span>
-      </form>
+        {parts[1]}
+      </span>
     )
   }
 
   if (sessionComplete) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 animate-in fade-in duration-700">
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="flex size-20 items-center justify-center rounded-full bg-success/10">
             <Check className="size-10 text-success" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-foreground">Session Complete</h2>
-            <p className="mt-2 text-muted-foreground">You mastered {completedCount} out of {words.length} words!</p>
+            <h2 className="text-4xl font-semibold tracking-tight text-foreground">Session Complete</h2>
+            <p className="mt-2 text-lg text-muted-foreground">You mastered {completedCount} out of {words.length} words!</p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => router.push("/")}>Dashboard</Button>
@@ -190,40 +259,49 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
               setCompletedCount(0);
             }}>Practice Again</Button>
           </div>
+          <div className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground/60">
+            <p>Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1.5 py-0.5 rounded text-foreground">Enter</kbd> to practice again</p>
+            <p>Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1.5 py-0.5 rounded text-foreground">ESC</kbd> to return to dashboard</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background selection:bg-primary/20">
+      <Progress 
+        value={progressPercentage} 
+        className="fixed top-0 left-0 right-0 z-50 h-0.5 w-full rounded-none bg-transparent" 
+      />
+
       <header className="flex items-center justify-between px-4 py-3 md:px-8">
         <div className="flex flex-1 items-center gap-4">
-          <Progress value={progressPercentage} className="h-1 max-w-xs" />
-          <span className="text-xs text-muted-foreground">{currentIndex + 1} / {words.length}</span>
+          <span className="text-xs font-medium text-muted-foreground">{currentIndex + 1} / {words.length}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-sm text-muted-foreground sm:inline">{deckTitle}</span>
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")}><X className="size-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+            <X className="size-5" />
+          </Button>
         </div>
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-6">
-        <div className="flex w-full max-w-2xl flex-col items-center gap-10">
-          <p className="text-center text-base text-muted-foreground leading-relaxed md:text-lg">
+        <div className="flex w-full max-w-3xl flex-col items-center gap-12">
+          <p className="text-center text-lg md:text-xl text-muted-foreground/80 font-light tracking-wide animate-in slide-in-from-bottom-2 fade-in duration-500">
             {currentWord?.korean.split(currentWord.koreanHighlight).map((part, i, arr) => (
               <span key={i}>
                 {part}
-                {i < arr.length - 1 && <strong className="font-bold text-foreground">{currentWord.koreanHighlight}</strong>}
+                {i < arr.length - 1 && <strong className="font-medium text-foreground">{currentWord.koreanHighlight}</strong>}
               </span>
             ))}
           </p>
 
-          <div className="text-center text-2xl font-medium text-foreground leading-relaxed md:text-3xl">
+          <div className="text-center text-2xl md:text-3xl leading-[1.6] animate-in slide-in-from-bottom-3 fade-in duration-700 delay-100">
             {renderSentence()}
           </div>
 
-          {/* Feedback area with fixed height to prevent Layout Shift */}
           <div className="flex h-[80px] w-full flex-col items-center justify-start gap-3 relative">
             <div className="absolute inset-0 flex flex-col items-center">
               {answerState === "correct" && (
@@ -234,11 +312,14 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
               )}
 
               {answerState === "incorrect" && !showHint && (
-                <div className="flex items-center gap-3 animate-in fade-in duration-200">
-                  <Button variant="outline" size="sm" onClick={() => setShowHint(true)} tabIndex={2}>
+                <div className="flex flex-col items-center gap-2 animate-in fade-in duration-200">
+                  <Button variant="outline" size="sm" onClick={() => setShowHint(true)}>
                     <Eye className="size-4 mr-2" />
                     Show Hint
                   </Button>
+                  <p className="text-[10px] text-muted-foreground/50">
+                    Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> for hint
+                  </p>
                 </div>
               )}
 
@@ -246,12 +327,17 @@ export function LearningSession({ deckId, deckTitle, initialWords: words }: Lear
                 <div className="flex flex-col items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
                   <p className="text-sm text-muted-foreground">
                     {"The answer is: "}
-                    <strong className="text-foreground">{currentWord.answer}</strong>
+                    <strong className="text-foreground font-mono tracking-wider">{currentWord.answer}</strong>
                   </p>
-                  <Button size="sm" onClick={moveToNext} className="gap-1.5" autoFocus>
-                    Next Word
-                    <ArrowRight className="size-3.5" />
-                  </Button>
+                  <div className="flex flex-col items-center gap-2">
+                    <Button size="sm" onClick={moveToNext} className="gap-1.5">
+                      Next Word
+                      <ArrowRight className="size-3.5" />
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground/50">
+                      Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> to skip
+                    </p>
+                  </div>
                 </div>
               )}
 

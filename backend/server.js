@@ -6,6 +6,61 @@ const middlewares = jsonServer.defaults()
 server.use(middlewares)
 server.use(jsonServer.bodyParser)
 
+// --- Auth Logic Start ---
+
+// 0. Auth Endpoints (Signup/Login)
+server.post('/api/auth/signup', (req, res) => {
+  const { email, password, goals } = req.body
+  const db = router.db.getState()
+  
+  // Ensure users table exists
+  if (!db.users) db.users = []
+
+  // Check for duplicate email
+  if (db.users.find(u => u.email === email)) {
+    return res.status(400).json({ error: "This email is already in use." })
+  }
+
+  const newUser = { 
+    id: Date.now().toString(), 
+    email, 
+    password, // In production, always hash passwords
+    goals: goals || [],
+    createdAt: new Date().toISOString() 
+  }
+
+  db.users.push(newUser)
+  router.db.set('users', db.users).write()
+
+  // Return user info and a mock JWT token
+  res.json({ 
+    success: true, 
+    user: { email: newUser.email }, 
+    token: "mock-jwt-token-" + newUser.id 
+  })
+})
+
+server.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body
+  const db = router.db.getState()
+  
+  if (!db.users) db.users = []
+
+  const user = db.users.find(u => u.email === email && u.password === password)
+  
+  if (!user) {
+    return res.status(401).json({ error: "Invalid email or password." })
+  }
+
+  res.json({ 
+    success: true, 
+    user: { email: user.email }, 
+    token: "mock-jwt-token-" + user.id 
+  })
+})
+
+// --- Auth Logic End ---
+
 // 1. Session Start Logic (POST /api/sessions/start)
 server.post('/api/sessions/start', (req, res) => {
   const { deckId, count } = req.body

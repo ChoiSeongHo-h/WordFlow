@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { SocialButtons } from "@/components/auth/social-buttons"
 import { PasswordStrength } from "@/components/auth/password-strength"
 import { cn } from "@/lib/utils"
+import { signup, setAuthToken } from "@/lib/api"
 
 const accountSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -27,7 +28,7 @@ const accountSchema = z.object({
   path: ["confirmPassword"],
 })
 
-type AccountErrors = Partial<Record<"email" | "password" | "confirmPassword", string>>
+type AccountErrors = Partial<Record<"email" | "password" | "confirmPassword" | "form", string>>
 
 const learningGoals = [
   { id: "toeic", label: "TOEIC Prep", description: "High-frequency test vocabulary" },
@@ -77,13 +78,6 @@ export function SignupForm() {
         return
       }
 
-      // Simulate checking if email already exists
-      if (email === "taken@example.com") {
-        setErrors({ email: "This email is already in use" })
-        triggerShake()
-        return
-      }
-
       setStep(2)
     },
     [email, password, confirmPassword, triggerShake]
@@ -99,20 +93,36 @@ export function SignupForm() {
 
   const handleStep2Submit = useCallback(async () => {
     setIsLoading(true)
+    setErrors({})
 
-    // Simulate account creation
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Actual API call to create account
+      const response = await signup({
+        email,
+        password,
+        goals: selectedGoals
+      })
 
-    setIsLoading(false)
-    setStep(3)
-    setShowWelcome(true)
-  }, [])
+      if (response.success) {
+        setAuthToken(response.token)
+        setIsLoading(false)
+        setStep(3)
+        setShowWelcome(true)
+      }
+    } catch (error: any) {
+      setErrors({ form: error.message || "Failed to create account." })
+      setStep(1) // Return to step 1 to show error
+      triggerShake()
+      setIsLoading(false)
+    }
+  }, [email, password, selectedGoals, triggerShake])
 
   // Redirect after welcome message
   useEffect(() => {
     if (showWelcome) {
       const timer = setTimeout(() => {
         router.push("/")
+        router.refresh()
       }, 3000)
       return () => clearTimeout(timer)
     }
@@ -199,6 +209,12 @@ export function SignupForm() {
           </div>
 
           <form onSubmit={handleStep1Submit} className="flex flex-col gap-4" noValidate>
+            {errors.form && (
+               <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                 {errors.form}
+               </div>
+            )}
+            
             <div className="flex flex-col gap-2">
               <Label htmlFor="signup-email">Email</Label>
               <Input
@@ -359,6 +375,7 @@ export function SignupForm() {
               variant="outline"
               className="h-11 gap-2"
               onClick={() => setStep(1)}
+              disabled={isLoading}
             >
               <ArrowLeft className="size-4" />
               Back

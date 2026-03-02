@@ -34,11 +34,67 @@ export interface SessionData {
   words: WordItem[];
 }
 
+// Authentication Interfaces
+export interface AuthResponse {
+  success: boolean;
+  user: { email: string };
+  token: string;
+  error?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password?: string;
+}
+
+export interface SignupData extends LoginCredentials {
+  goals: string[];
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export interface VerifyResponse {
   isCorrect: boolean;
   correctAnswer?: string;
+}
+
+/** Helper to save token */
+export function setAuthToken(token: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("flow_token", token);
+  }
+}
+
+/** Helper to get token */
+export function getAuthToken() {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("flow_token");
+  }
+  return null;
+}
+
+/** Login API */
+export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credentials),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Login failed");
+  return data;
+}
+
+/** Signup API */
+export async function signup(userData: SignupData): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(userData),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Signup failed");
+  return data;
 }
 
 /** Fetch a list of all decks */
@@ -67,7 +123,10 @@ export async function getUserProgress(): Promise<UserProgress> {
 export async function startSession(deckId: string, count: number): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/sessions/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getAuthToken()}`
+    },
     body: JSON.stringify({ deckId, count }),
   });
   if (!res.ok) throw new Error("Failed to start session");
@@ -75,7 +134,10 @@ export async function startSession(deckId: string, count: number): Promise<void>
 
 /** Fetch the questions for the current active session */
 export async function getSessionQuestions(): Promise<SessionData> {
-  const res = await fetch(`${API_BASE_URL}/api/sessions/questions`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE_URL}/api/sessions/questions`, { 
+    cache: 'no-store',
+    headers: { "Authorization": `Bearer ${getAuthToken()}` }
+  });
   if (!res.ok) throw new Error("Failed to fetch session questions");
   return res.json();
 }

@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { SocialButtons } from "@/components/auth/social-buttons"
 import { cn } from "@/lib/utils"
+import { login, setAuthToken } from "@/lib/api"
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -40,11 +41,11 @@ export function LoginForm() {
       e.preventDefault()
       setErrors({})
 
-      const result = loginSchema.safeParse({ email, password })
+      const validationResult = loginSchema.safeParse({ email, password })
 
-      if (!result.success) {
+      if (!validationResult.success) {
         const fieldErrors: LoginErrors = {}
-        result.error.errors.forEach((err) => {
+        validationResult.error.errors.forEach((err) => {
           const field = err.path[0] as keyof LoginErrors
           fieldErrors[field] = err.message
         })
@@ -55,19 +56,22 @@ export function LoginForm() {
 
       setIsLoading(true)
 
-      // Simulate auth request
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-
-      // Demo: simulate invalid credentials for demo@error.com
-      if (email === "demo@error.com") {
-        setErrors({ form: "Invalid email or password. Please try again." })
+      try {
+        // Actual API call
+        const response = await login({ email, password })
+        
+        if (response.success) {
+          setAuthToken(response.token)
+          // Smooth transition to dashboard
+          router.push("/")
+          router.refresh()
+        }
+      } catch (error: any) {
+        setErrors({ form: error.message || "Something went wrong. Please try again." })
         triggerShake()
+      } finally {
         setIsLoading(false)
-        return
       }
-
-      // Success - redirect to dashboard
-      router.push("/")
     },
     [email, password, router, triggerShake]
   )
@@ -83,7 +87,7 @@ export function LoginForm() {
   return (
     <div className={cn("flex flex-col gap-6", shake && "animate-shake")}>
       {/* Social Auth */}
-      <SocialButtons disabled={isLoading} />
+      < SocialButtons disabled={isLoading} />
 
       {/* Divider */}
       <div className="flex items-center gap-4">
@@ -96,7 +100,7 @@ export function LoginForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {/* Form-level error */}
         {errors.form && (
-          <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive animate-in fade-in zoom-in-95 duration-200">
             {errors.form}
           </div>
         )}

@@ -241,171 +241,62 @@
     "totalWords": 95
   },
   "currentSession": {
-    "deckId": "essential-toeic",
-    "deckTitle": "Essential TOEIC",
-    "totalQuestions": 20,
+    "deckId": "business-english",
+    "deckTitle": "Business English",
+    "totalQuestions": 5,
     "words": [
       {
-        "id": "et-6",
-        "korean": "그녀는 보고서를 \"검토했다.\"",
-        "koreanHighlight": "검토했다",
-        "english": "She ___ the report carefully.",
-        "answer": "reviewed",
+        "id": "be-6",
+        "korean": "그들은 계약 조건을 \"협상했다.\"",
+        "koreanHighlight": "협상했다",
+        "english": "They ___ the terms of the contract.",
+        "answer": "negotiated",
         "blankIndex": 1
       },
       {
-        "id": "et-1",
-        "korean": "나는 매일 사과를 \"먹는다.\"",
-        "koreanHighlight": "먹는다",
-        "english": "I ___ an apple every day.",
-        "answer": "have",
+        "id": "be-1",
+        "korean": "우리는 분기별 보고서를 \"제출해야\" 합니다.",
+        "koreanHighlight": "제출해야",
+        "english": "We need to ___ the quarterly report.",
+        "answer": "submit",
+        "blankIndex": 4
+      },
+      {
+        "id": "be-2",
+        "korean": "그녀는 회의를 다음 주로 \"연기했다.\"",
+        "koreanHighlight": "연기했다",
+        "english": "She ___ the meeting to next week.",
+        "answer": "postponed",
         "blankIndex": 1
       },
       {
-        "id": "et-6",
-        "korean": "그녀는 보고서를 \"검토했다.\"",
-        "koreanHighlight": "검토했다",
-        "english": "She ___ the report carefully.",
-        "answer": "reviewed",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-2",
-        "korean": "그들은 새로운 직원을 \"고용했다.\"",
-        "koreanHighlight": "고용했다",
-        "english": "They ___ a new employee.",
-        "answer": "hired",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-2",
-        "korean": "그들은 새로운 직원을 \"고용했다.\"",
-        "koreanHighlight": "고용했다",
-        "english": "They ___ a new employee.",
-        "answer": "hired",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-2",
-        "korean": "그들은 새로운 직원을 \"고용했다.\"",
-        "koreanHighlight": "고용했다",
-        "english": "They ___ a new employee.",
-        "answer": "hired",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-6",
-        "korean": "그녀는 보고서를 \"검토했다.\"",
-        "koreanHighlight": "검토했다",
-        "english": "She ___ the report carefully.",
-        "answer": "reviewed",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-5",
-        "korean": "우리는 비용을 \"절감해야\" 한다.",
-        "koreanHighlight": "절감해야",
-        "english": "We must ___ costs.",
-        "answer": "reduce",
+        "id": "be-3",
+        "korean": "매니저가 새로운 정책을 \"시행했다.\"",
+        "koreanHighlight": "시행했다",
+        "english": "The manager ___ a new policy.",
+        "answer": "implemented",
         "blankIndex": 2
       },
       {
-        "id": "et-4",
-        "korean": "고객이 제품에 대해 \"불평했다.\"",
-        "koreanHighlight": "불평했다",
-        "english": "The customer ___ about the product.",
-        "answer": "complained",
-        "blankIndex": 2
-      },
-      {
-        "id": "et-6",
-        "korean": "그녀는 보고서를 \"검토했다.\"",
-        "koreanHighlight": "검토했다",
-        "english": "She ___ the report carefully.",
-        "answer": "reviewed",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-1",
-        "korean": "나는 매일 사과를 \"먹는다.\"",
-        "koreanHighlight": "먹는다",
-        "english": "I ___ an apple every day.",
-        "answer": "have",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-3",
-        "korean": "회의는 오후 3시에 \"시작된다.\"",
-        "koreanHighlight": "시작된다",
-        "english": "The meeting ___ at 3 PM.",
-        "answer": "begins",
-        "blankIndex": 2
-      },
-      {
-        "id": "et-3",
-        "korean": "회의는 오후 3시에 \"시작된다.\"",
-        "koreanHighlight": "시작된다",
-        "english": "The meeting ___ at 3 PM.",
-        "answer": "begins",
-        "blankIndex": 2
-      },
-      {
-        "id": "et-5",
-        "korean": "우리는 비용을 \"절감해야\" 한다.",
-        "koreanHighlight": "절감해야",
-        "english": "We must ___ costs.",
-        "answer": "reduce",
-        "blankIndex": 2
-      },
-      {
-        "id": "et-4",
-        "korean": "고객이 제품에 대해 \"불평했다.\"",
-        "koreanHighlight": "불평했다",
-        "english": "The customer ___ about the product.",
-        "answer": "complained",
-        "blankIndex": 2
-      },
-      {
-        "id": "et-3",
-        "korean": "회의는 오후 3시에 \"시작된다.\"",
-        "koreanHighlight": "시작된다",
-        "english": "The meeting ___ at 3 PM.",
-        "answer": "begins",
-        "blankIndex": 2
-      },
-      {
-        "id": "et-2",
-        "korean": "그들은 새로운 직원을 \"고용했다.\"",
-        "koreanHighlight": "고용했다",
-        "english": "They ___ a new employee.",
-        "answer": "hired",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-6",
-        "korean": "그녀는 보고서를 \"검토했다.\"",
-        "koreanHighlight": "검토했다",
-        "english": "She ___ the report carefully.",
-        "answer": "reviewed",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-2",
-        "korean": "그들은 새로운 직원을 \"고용했다.\"",
-        "koreanHighlight": "고용했다",
-        "english": "They ___ a new employee.",
-        "answer": "hired",
-        "blankIndex": 1
-      },
-      {
-        "id": "et-3",
-        "korean": "회의는 오후 3시에 \"시작된다.\"",
-        "koreanHighlight": "시작된다",
-        "english": "The meeting ___ at 3 PM.",
-        "answer": "begins",
-        "blankIndex": 2
+        "id": "be-5",
+        "korean": "그는 프로젝트의 \"마감일\"을 지켰다.",
+        "koreanHighlight": "마감일",
+        "english": "He met the project ___.",
+        "answer": "deadline",
+        "blankIndex": 4
       }
     ],
-    "startedAt": "2026-03-02T04:53:34.952Z"
-  }
+    "startedAt": "2026-03-02T04:59:14.833Z"
+  },
+  "users": [
+    {
+      "id": "1772428024503",
+      "email": "test@test.com",
+      "password": "@c789456c@A",
+      "goals": [
+        "toeic"
+      ],
+      "createdAt": "2026-03-02T05:07:04.503Z"
+    }
+  ]
 }

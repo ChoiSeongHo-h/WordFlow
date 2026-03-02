@@ -27,6 +27,13 @@ export interface UserProgress {
   totalWords: number
 }
 
+export interface SessionData {
+  deckId: string;
+  deckTitle: string;
+  totalQuestions: number;
+  words: WordItem[];
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export interface VerifyResponse {
@@ -53,6 +60,23 @@ export async function getDeckById(id: string): Promise<Deck | null> {
 export async function getUserProgress(): Promise<UserProgress> {
   const res = await fetch(`${API_BASE_URL}/userProgress`, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch user progress");
+  return res.json();
+}
+
+/** Initialize a learning session */
+export async function startSession(deckId: string, count: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/sessions/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deckId, count }),
+  });
+  if (!res.ok) throw new Error("Failed to start session");
+}
+
+/** Fetch the questions for the current active session */
+export async function getSessionQuestions(): Promise<SessionData> {
+  const res = await fetch(`${API_BASE_URL}/api/sessions/questions`, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Failed to fetch session questions");
   return res.json();
 }
 

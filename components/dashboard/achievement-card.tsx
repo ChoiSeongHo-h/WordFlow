@@ -1,11 +1,13 @@
 "use client"
 
-import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import * as React from "react"
+import { useRouter } from "next/navigation" // useRouter 추가
+import { ArrowRight, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CircularProgress } from "@/components/circular-progress"
 import { DailyGoalSetter } from "./daily-goal-setter"
+import { startSession } from "@/lib/api" // startSession 추가
 
 interface AchievementCardProps {
   dailyCompleted: number
@@ -20,6 +22,22 @@ export function AchievementCard({
   onGoalChange,
   firstDeckId,
 }: AchievementCardProps) {
+  const router = useRouter()
+  const [isStarting, setIsStarting] = React.useState(false)
+
+  const handleStartNow = async () => {
+    if (!firstDeckId) return
+    
+  setIsStarting(true)
+    try {
+      await startSession(firstDeckId, dailyGoal) 
+      router.push(`/learn/${firstDeckId}`)
+    } catch (error) {
+      console.error("Failed to start session:", error)
+      setIsStarting(false)
+    }
+  }
+
   return (
     <Card className="md:col-span-2 overflow-hidden border-none shadow-md bg-card/50 backdrop-blur-sm">
       <CardContent className="p-8">
@@ -56,12 +74,24 @@ export function AchievementCard({
 
             {/* Call to Action */}
             {firstDeckId && (
-              <Link href={`/learn/${firstDeckId}`} className="w-full">
-                <Button size="lg" className="w-full h-12 text-base font-semibold gap-2 rounded-xl transition-all hover:gap-3">
-                  Start Learning Now
-                  <ArrowRight className="size-5" />
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                className="w-full h-12 text-base font-semibold gap-2 rounded-xl transition-all hover:gap-3"
+                onClick={handleStartNow}
+                disabled={isStarting}
+              >
+                {isStarting ? (
+                  <>
+                    <Loader2 className="size-5 animate-spin" />
+                    Preparing...
+                  </>
+                ) : (
+                  <>
+                    Start Learning Now
+                    <ArrowRight className="size-5" />
+                  </>
+                )}
+              </Button>
             )}
           </div>
         </div>

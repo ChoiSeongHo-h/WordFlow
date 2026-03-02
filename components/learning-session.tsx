@@ -13,10 +13,10 @@ type AnswerState = "idle" | "correct" | "incorrect"
 
 interface LearningSessionProps {
   deckTitle: string
-  words: WordItem[]
+  initialWords: WordItem[]
 }
 
-export function LearningSession({ deckTitle, words }: LearningSessionProps) {
+export function LearningSession({ deckTitle, initialWords: words }: LearningSessionProps) {
   const router = useRouter()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [inputValue, setInputValue] = useState("")
@@ -34,7 +34,7 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
   const currentWord = words[currentIndex]
   const progressPercentage = Math.round((currentIndex / words.length) * 100)
 
-  // Auto-focus input
+  // Auto-focus input on mount and word change
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus()
@@ -42,7 +42,7 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
     return () => clearTimeout(timer)
   }, [currentIndex])
 
-  // Dynamic width based on input content
+  // Dynamic width adjustment based on content
   useEffect(() => {
     if (spanRef.current) {
       const width = Math.max(80, spanRef.current.offsetWidth + 24)
@@ -97,19 +97,8 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
     }
   }
 
-  const handleShowHint = () => {
-    setShowHint(true)
-  }
-
-  const handleRetry = () => {
-    setInputValue("")
-    setAnswerState("idle")
-    setShowHint(false)
-    inputRef.current?.focus()
-  }
-
-  // Render the English sentence with the inline input
   const renderSentence = () => {
+    if (!currentWord) return null
     const parts = currentWord.english.split("___")
     if (parts.length < 2) return <span>{currentWord.english}</span>
 
@@ -166,7 +155,7 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
               Session Complete
             </h2>
             <p className="mt-2 text-muted-foreground">
-              You got {completedCount} out of {words.length} words correct!
+              You mastered {completedCount} out of {words.length} words!
             </p>
           </div>
           <div className="flex gap-3">
@@ -193,7 +182,6 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Minimalist Header */}
       <header className="flex items-center justify-between px-4 py-3 md:px-8">
         <div className="flex flex-1 items-center gap-4">
           <Progress value={progressPercentage} className="h-1 max-w-xs" />
@@ -216,12 +204,10 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex flex-1 flex-col items-center justify-center px-6">
         <div className="flex w-full max-w-2xl flex-col items-center gap-10">
-          {/* Korean Guide */}
           <p className="text-center text-base text-muted-foreground leading-relaxed md:text-lg">
-            {currentWord.korean.split(currentWord.koreanHighlight).map((part, i, arr) => (
+            {currentWord?.korean.split(currentWord.koreanHighlight).map((part, i, arr) => (
               <span key={i}>
                 {part}
                 {i < arr.length - 1 && (
@@ -233,12 +219,10 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
             ))}
           </p>
 
-          {/* English Sentence with Input */}
           <div className="text-center text-2xl font-medium text-foreground leading-relaxed md:text-3xl">
             {renderSentence()}
           </div>
 
-          {/* Feedback Area */}
           <div className="flex min-h-[48px] flex-col items-center gap-3">
             {answerState === "correct" && (
               <div className="flex items-center gap-2 text-success animate-in fade-in duration-300">
@@ -249,11 +233,14 @@ export function LearningSession({ deckTitle, words }: LearningSessionProps) {
 
             {answerState === "incorrect" && !showHint && (
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" onClick={handleShowHint}>
+                <Button variant="outline" size="sm" onClick={() => setShowHint(true)}>
                   <Eye className="size-4" />
                   Show Hint
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleRetry}>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setInputValue("")
+                  setAnswerState("idle")
+                }}>
                   Try Again
                 </Button>
               </div>

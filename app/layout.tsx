@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
 const _inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -43,6 +44,7 @@ export default function RootLayout({
     <html lang="en" className={`${_inter.variable} ${_spaceGrotesk.variable}`}>
       <body className="font-sans antialiased min-h-screen">
         {children}
+        <Toaster />
         <Analytics />
       </body>
     </html>

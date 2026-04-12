@@ -2,8 +2,9 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Flame, Zap, TrendingUp, Loader2, BookOpen, Target, BarChart3 } from "lucide-react"
+import { Flame, Zap, TrendingUp, Loader2, BookOpen, Target, BarChart3, Settings } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { DeckCard } from "@/components/deck-card"
 import { AchievementCard } from "@/components/dashboard/achievement-card"
 import { getDecks, getUserProgress, type Deck, type UserProgress } from "@/lib/api"
@@ -87,6 +88,14 @@ export default function DashboardPage() {
                 {userProgress.streak} day streak
               </span>
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => router.push("/settings")}
+              className="rounded-full hover:bg-accent"
+            >
+              <Settings className="size-5 text-muted-foreground transition-colors group-hover:text-foreground" />
+            </Button>
           </div>
         </div>
       </header>

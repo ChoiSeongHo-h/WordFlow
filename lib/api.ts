@@ -6,7 +6,6 @@ export interface WordItem {
   koreanHighlight: string
   english: string
   answer: string
-  /** position of the blank in the english sentence (word index) */
   blankIndex: number
 }
 
@@ -51,21 +50,19 @@ export interface SignupData extends LoginCredentials {
   goals: string[];
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export interface VerifyResponse {
   isCorrect: boolean;
   correctAnswer?: string;
 }
 
-/** Helper to save token */
 export function setAuthToken(token: string) {
   if (typeof window !== "undefined") {
     localStorage.setItem("flow_token", token);
   }
 }
 
-/** Helper to get token */
 export function getAuthToken() {
   if (typeof window !== "undefined") {
     return localStorage.getItem("flow_token");
@@ -73,124 +70,127 @@ export function getAuthToken() {
   return null;
 }
 
-// --- Local-First Persistence & Background Sync Engine ---
+export function saveProgressLocally(deckId: string, currentIndex: number, completedCount: number) {}
+export function loadLocalProgress(deckId: string) { return null; }
 
-/** * Save session progress locally first to ensure zero data loss.
- * Then trigger background sync without blocking the UI.
- */
-export function saveProgressLocally(deckId: string, currentIndex: number, completedCount: number) {
-  if (typeof window === "undefined") return;
-  
-  const progressData = { currentIndex, completedCount, timestamp: Date.now() };
-  localStorage.setItem(`flow_progress_${deckId}`, JSON.stringify(progressData));
-  
-  // Background sync (Fire and forget)
-  syncProgressInBackground(deckId, progressData);
-}
-
-/**
- * Attempt to sync with the server. Failures are queued for later retries.
- */
-async function syncProgressInBackground(deckId: string, data: any) {
-  try {
-    await fetch(`${API_BASE_URL}/api/sync`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getAuthToken()}` },
-      body: JSON.stringify({ deckId, ...data }),
-      // Keep request alive even if the page starts unloading
-      keepalive: true 
-    });
-  } catch (error) {
-    console.warn("Background sync postponed due to network/server state.");
-  }
-}
-
-/** Load locally saved progress on component mount */
-export function loadLocalProgress(deckId: string) {
-  if (typeof window === "undefined") return null;
-  const saved = localStorage.getItem(`flow_progress_${deckId}`);
-  return saved ? JSON.parse(saved) : null;
-}
-
-/** Login API */
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(credentials),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Login failed");
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Login failed");
-  return data;
+  return {
+    success: true,
+    user: { email: credentials.email },
+    token: data.accessToken
+  };
 }
 
-/** Signup API */
 export async function signup(userData: SignupData): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+  const res = await fetch(`${API_BASE_URL}/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(userData),
+    body: JSON.stringify({ email: userData.email, password: userData.password, nickname: "User" }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Signup failed");
-  return data;
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Signup failed");
+  }
+  return {
+    success: true,
+    user: { email: userData.email },
+    token: ""
+  };
 }
 
-/** Fetch a list of all decks */
 export async function getDecks(): Promise<Deck[]> {
-  const res = await fetch(`${API_BASE_URL}/decks`, { cache: 'no-store' });
-  if (!res.ok) throw new Error("Failed to fetch decks");
-  return res.json();
+  // Mock data for decks as backend doesn't have it yet
+  return [
+    { id: "1", title: "Daily Review", description: "Review your words", icon: "book", completed: 0, total: 10, words: [] }
+  ];
 }
 
-/** Get specific deck details by ID */
 export async function getDeckById(id: string): Promise<Deck | null> {
-  const res = await fetch(`${API_BASE_URL}/decks/${id}`, { cache: 'no-store' });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch deck");
-  return res.json();
+  return { id, title: "Daily Review", description: "Review your words", icon: "book", completed: 0, total: 10, words: [] };
 }
 
-/** Fetch user progress data */
 export async function getUserProgress(): Promise<UserProgress> {
-  const res = await fetch(`${API_BASE_URL}/userProgress`, { cache: 'no-store' });
-  if (!res.ok) throw new Error("Failed to fetch user progress");
-  return res.json();
+  return { dailyGoal: 10, dailyCompleted: 0, streak: 0, totalWordsLearned: 0, totalWords: 0 };
 }
 
-/** Initialize a learning session */
 export async function startSession(deckId: string, count: number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/sessions/start`, {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error("User is not authenticated. Please log in.");
+  }
+
+  const res = await fetch(`${API_BASE_URL}/lesson/testCount?testCount=${count}`, {
+    method: "POST",
+    headers: { 
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("Your session has expired or you are not authorized. Please log in again.");
+    }
+    const errorText = await res.text();
+    throw new Error(errorText || "Failed to start session");
+  }
+}
+
+export async function fetchNextWord(): Promise<WordItem | null> {
+  const res = await fetch(`${API_BASE_URL}/lesson/test`, { 
+    cache: 'no-store',
+    headers: { "Authorization": `Bearer ${getAuthToken()}` }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  
+  const sentenceStr = data.sentence || "";
+  const match = sentenceStr.match(/\[(.*?)\]/);
+  const answer = match ? match[1] : "";
+  const english = sentenceStr.replace(/\[.*?\]/, "___");
+
+  return {
+    id: String(data.sentenceId),
+    korean: (data.meaning || "").replace(/\r/g, "").trim(),
+    koreanHighlight: "",
+    english,
+    answer,
+    blankIndex: 0
+  };
+}
+
+export async function getSessionQuestions(): Promise<SessionData> {
+  // Return shell SessionData.
+  return {
+    deckId: "1",
+    deckTitle: "Daily Lesson",
+    totalQuestions: 10,
+    words: [] 
+  };
+}
+
+export async function verifyAnswer(wordId: string, userInput: string): Promise<VerifyResponse> {
+  const res = await fetch(`${API_BASE_URL}/lesson/test`, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
       "Authorization": `Bearer ${getAuthToken()}`
     },
-    body: JSON.stringify({ deckId, count }),
-  });
-  if (!res.ok) throw new Error("Failed to start session");
-}
+    body: JSON.stringify({ sentenceId: Number(wordId), answer: userInput }),
+  }).catch(() => null);
 
-/** Fetch the questions for the current active session */
-export async function getSessionQuestions(): Promise<SessionData> {
-  const res = await fetch(`${API_BASE_URL}/api/sessions/questions`, { 
-    cache: 'no-store',
-    headers: { "Authorization": `Bearer ${getAuthToken()}` }
-  });
-  if (!res.ok) throw new Error("Failed to fetch session questions");
-  return res.json();
-}
-
-/** Verify answer API */
-export async function verifyAnswer(wordId: string, userInput: string): Promise<VerifyResponse> {
-  const res = await fetch(`${API_BASE_URL}/verify-answer`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wordId, userInput }),
-  }).catch(() => {
-    return null;
-  });
-
-  if (res && res.ok) return res.json();
-  return { isCorrect: true }; 
+  if (res && res.ok) {
+    const isCorrect = await res.json();
+    return { isCorrect };
+  }
+  return { isCorrect: false }; 
 }

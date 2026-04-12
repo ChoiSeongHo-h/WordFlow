@@ -10,9 +10,10 @@ export default async function LearnPage() {
   const sessionData = await getSessionQuestions()
 
   return (
-    <LearningSession 
-      deckTitle={sessionData.deckTitle} 
-      initialWords={sessionData.words} 
+    <LearningSession
+      deckId={sessionData.deckId}
+      deckTitle={sessionData.deckTitle}
+      totalQuestions={sessionData.totalQuestions}
     />
   )
 }

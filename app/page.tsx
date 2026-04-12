@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Flame, Zap, TrendingUp, Loader2, BookOpen, Target, BarChart3 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { DeckCard } from "@/components/deck-card"
@@ -12,6 +13,7 @@ const LOCAL_STORAGE_KEY = "wordflow-daily-goal"
 const DEFAULT_GOAL = 20
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [decks, setDecks] = React.useState<Deck[]>([])
   const [userProgress, setUserProgress] = React.useState<UserProgress | null>(null)
   const [dailyGoal, setDailyGoal] = React.useState<number>(DEFAULT_GOAL)
@@ -19,6 +21,12 @@ export default function DashboardPage() {
 
   // Initialize data and local storage
   React.useEffect(() => {
+    const token = localStorage.getItem("flow_token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
     async function loadData() {
       try {
         const [decksData, progressData] = await Promise.all([

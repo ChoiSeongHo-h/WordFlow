@@ -1,13 +1,12 @@
 // hooks/use-learning-session.ts
 import { useState, useCallback, useEffect } from "react"
-import { verifyAnswer, saveProgressLocally, loadLocalProgress, type WordItem } from "@/lib/api"
+import { verifyAnswer, fetchNextWord, type WordItem } from "@/lib/api"
 
-// State Machine Definition for strict state management
 export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "hint" | "complete"
 
 interface UseLearningSessionReturn {
   currentIndex: number
-  currentWord: WordItem
+  currentWord: WordItem | null
   status: SessionStatus
   completedCount: number
   progressPercentage: number
@@ -18,42 +17,49 @@ interface UseLearningSessionReturn {
   resetSession: () => void
 }
 
-export function useLearningSession(deckId: string, words: WordItem[]): UseLearningSessionReturn {
+export function useLearningSession(deckId: string, totalQuestions: number): UseLearningSessionReturn {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
   const [status, setStatus] = useState<SessionStatus>("idle")
+  const [currentWord, setCurrentWord] = useState<WordItem | null>(null)
 
-  const currentWord = words[currentIndex]
-  const progressPercentage = Math.round((currentIndex / words.length) * 100)
+  const progressPercentage = Math.round((currentIndex / totalQuestions) * 100)
 
-  // 1. Initialize local progress on mount
+  // Fetch initial word on mount
   useEffect(() => {
-    const saved = loadLocalProgress(deckId)
-    if (saved && saved.currentIndex < words.length) {
-      setCurrentIndex(saved.currentIndex)
-      setCompletedCount(saved.completedCount)
-    }
-  }, [deckId, words.length])
+    fetchNextWord().then(word => {
+      if (word) {
+        setCurrentWord(word)
+      } else {
+        setStatus("complete") // If backend buffer is empty
+      }
+    }).catch(() => setStatus("complete"));
+  }, [deckId])
 
-  // Transition: Reset to idle when user starts typing again
   const handleInputStart = useCallback(() => {
     if (status === "incorrect") setStatus("idle")
   }, [status])
 
-  const moveToNext = useCallback(() => {
-    if (currentIndex < words.length - 1) {
+  const moveToNext = useCallback(async () => {
+    if (currentIndex < totalQuestions - 1) {
       const nextIndex = currentIndex + 1
       setCurrentIndex(nextIndex)
-      setStatus("idle")
-      saveProgressLocally(deckId, nextIndex, completedCount)
+      setStatus("validating")
+      
+      const nextWord = await fetchNextWord()
+      if (nextWord) {
+        setCurrentWord(nextWord)
+        setStatus("idle")
+      } else {
+        setStatus("complete")
+      }
     } else {
       setStatus("complete")
-      saveProgressLocally(deckId, 0, 0)
     }
-  }, [currentIndex, words.length, deckId, completedCount])
+  }, [currentIndex, totalQuestions])
 
   const submitAnswer = useCallback(async (answer: string) => {
-    if (!answer || status === "validating" || status === "correct") return
+    if (!answer || status === "validating" || status === "correct" || !currentWord) return
 
     setStatus("validating")
     try {
@@ -61,16 +67,15 @@ export function useLearningSession(deckId: string, words: WordItem[]): UseLearni
       if (result.isCorrect) {
         setStatus("correct")
         setCompletedCount((prev) => prev + 1)
-        // Auto-advance on correct answer
         setTimeout(() => moveToNext(), 600)
       } else {
         setStatus("incorrect")
       }
     } catch (error) {
       console.error("Verification failed", error)
-      setStatus("idle") // Fallback on error
+      setStatus("idle") 
     }
-  }, [currentWord.id, status, moveToNext])
+  }, [currentWord, status, moveToNext])
 
   const showHint = useCallback(() => {
     if (status === "incorrect") setStatus("hint")
@@ -80,6 +85,11 @@ export function useLearningSession(deckId: string, words: WordItem[]): UseLearni
     setCurrentIndex(0)
     setStatus("idle")
     setCompletedCount(0)
+    setCurrentWord(null)
+    fetchNextWord().then(word => {
+      if (word) setCurrentWord(word)
+      else setStatus("complete")
+    })
   }, [])
 
   return {

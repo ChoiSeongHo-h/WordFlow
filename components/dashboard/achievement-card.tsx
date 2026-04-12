@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { CircularProgress } from "@/components/circular-progress"
 import { DailyGoalSetter } from "./daily-goal-setter"
 import { startSession } from "@/lib/api"
+import { toast } from "sonner"
 
 interface AchievementCardProps {
   dailyCompleted: number
@@ -32,8 +33,9 @@ export function AchievementCard({
     try {
       await startSession(firstDeckId, dailyGoal) 
       router.push(`/learn/${firstDeckId}`)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start session:", error)
+      toast.error(error.message || "Failed to start learning session. Please try again.")
       setIsStarting(false)
     }
   }

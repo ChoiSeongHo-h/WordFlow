@@ -2,25 +2,24 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { X } from "lucide-react"
+import { X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import type { WordItem } from "@/lib/api"
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut"
 import { useLearningSession } from "@/hooks/use-learning-session"
 import { SentenceInput } from "@/components/learning/sentence-input"
-import { SessionFeedback } from "@/components/learning/session-feedback" // Extracted Feedback Component
-import { SessionComplete } from "@/components/learning/session-complete" // Extracted Completion Component
+import { SessionFeedback } from "@/components/learning/session-feedback" 
+import { SessionComplete } from "@/components/learning/session-complete"
 
 interface LearningSessionProps {
   deckId: string
   deckTitle: string
-  initialWords: WordItem[]
+  totalQuestions: number
 }
 
-export function LearningSession({ deckId, deckTitle, initialWords }: LearningSessionProps) {
+export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningSessionProps) {
   const router = useRouter()
-  const session = useLearningSession(deckId, initialWords)
+  const session = useLearningSession(deckId, totalQuestions)
 
   // Global Shortcuts
   useKeyboardShortcut("Escape", () => router.push("/"))
@@ -38,10 +37,18 @@ export function LearningSession({ deckId, deckTitle, initialWords }: LearningSes
     return (
       <SessionComplete 
         completedCount={session.completedCount} 
-        totalWords={initialWords.length} 
+        totalWords={totalQuestions} 
         onDashboard={() => router.push("/")}
         onRetry={session.resetSession} 
       />
+    )
+  }
+
+  if (!session.currentWord && session.status !== "complete") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
@@ -52,7 +59,7 @@ export function LearningSession({ deckId, deckTitle, initialWords }: LearningSes
       <header className="flex items-center justify-between px-4 py-3 md:px-8">
         <div className="flex flex-1 items-center gap-4">
           <span className="text-xs font-medium text-muted-foreground">
-            {session.currentIndex + 1} / {initialWords.length}
+            {session.currentIndex + 1} / {totalQuestions}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -67,34 +74,44 @@ export function LearningSession({ deckId, deckTitle, initialWords }: LearningSes
         <div className="flex w-full max-w-3xl flex-col items-center gap-12">
           {/* Korean Translation */}
           <p className="text-center text-lg md:text-xl text-muted-foreground/80 font-light tracking-wide">
-            {session.currentWord?.korean.split(session.currentWord.koreanHighlight).map((part, i, arr) => (
-              <span key={i}>
-                {part}
-                {i < arr.length - 1 && <strong className="font-medium text-foreground">{session.currentWord.koreanHighlight}</strong>}
-              </span>
-            ))}
+            {session.currentWord && (
+              session.currentWord.koreanHighlight ? (
+                session.currentWord.korean.split(session.currentWord.koreanHighlight).map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && <strong className="font-medium text-foreground">{session.currentWord?.koreanHighlight}</strong>}
+                  </span>
+                ))
+              ) : (
+                session.currentWord.korean
+              )
+            )}
           </p>
 
           {/* Interactive Sentence */}
-          <div className="text-center text-2xl md:text-3xl leading-relaxed">
-            <SentenceInput
-              currentWord={session.currentWord}
-              status={session.status}
-              onInputChange={session.handleInputStart}
-              onSubmit={session.submitAnswer}
-              onHintRequest={session.showHint}
-              onSkip={session.moveToNext}
-            />
-          </div>
+          {session.currentWord && (
+            <div className="text-center text-2xl md:text-3xl leading-relaxed">
+              <SentenceInput
+                currentWord={session.currentWord}
+                status={session.status}
+                onInputChange={session.handleInputStart}
+                onSubmit={session.submitAnswer}
+                onHintRequest={session.showHint}
+                onSkip={session.moveToNext}
+              />
+            </div>
+          )}
 
           {/* Feedback Area */}
           <div className="flex h-20 w-full flex-col items-center justify-start gap-3 relative">
-            <SessionFeedback 
-              status={session.status} 
-              currentWord={session.currentWord} 
-              onShowHint={session.showHint} 
-              onNext={session.moveToNext} 
-            />
+            {session.currentWord && (
+              <SessionFeedback 
+                status={session.status} 
+                currentWord={session.currentWord} 
+                onShowHint={session.showHint} 
+                onNext={session.moveToNext} 
+              />
+            )}
           </div>
         </div>
       </main>

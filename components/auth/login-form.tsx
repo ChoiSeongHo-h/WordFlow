@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { SocialButtons } from "@/components/auth/social-buttons"
 import { cn } from "@/lib/utils"
-import { login, setAuthToken } from "@/lib/api"
+import { login, setAuthToken, getAuthToken } from "@/lib/api"
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -23,6 +23,13 @@ type LoginErrors = Partial<Record<"email" | "password" | "form", string>>
 
 export function LoginForm() {
   const router = useRouter()
+
+  useEffect(() => {
+    if (getAuthToken()) {
+      router.replace("/")
+    }
+  }, [router])
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)

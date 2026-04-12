@@ -70,6 +70,12 @@ export function getAuthToken() {
   return null;
 }
 
+export function removeAuthToken() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("flow_token");
+  }
+}
+
 export function saveProgressLocally(deckId: string, currentIndex: number, completedCount: number) {}
 export function loadLocalProgress(deckId: string) { return null; }
 
@@ -138,6 +144,7 @@ export async function startSession(deckId: string, count: number): Promise<void>
 
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
+      removeAuthToken();
       throw new Error("Your session has expired or you are not authorized. Please log in again.");
     }
     const errorText = await res.text();

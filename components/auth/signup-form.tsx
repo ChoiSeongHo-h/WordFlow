@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { SocialButtons } from "@/components/auth/social-buttons"
 import { PasswordStrength } from "@/components/auth/password-strength"
 import { cn } from "@/lib/utils"
-import { signup, setAuthToken } from "@/lib/api"
+import { signup, setAuthToken, getAuthToken } from "@/lib/api"
 
 const accountSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -41,6 +41,13 @@ const learningGoals = [
 
 export function SignupForm() {
   const router = useRouter()
+
+  useEffect(() => {
+    if (getAuthToken()) {
+      router.replace("/")
+    }
+  }, [router])
+
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")

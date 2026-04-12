@@ -154,14 +154,19 @@ export async function fetchNextWord(): Promise<WordItem | null> {
   const data = await res.json();
   
   const sentenceStr = data.sentence || "";
-  const match = sentenceStr.match(/\[(.*?)\]/);
-  const answer = match ? match[1] : "";
-  const english = sentenceStr.replace(/\[.*?\]/, "___");
+  const engMatch = sentenceStr.match(/\[(.*?)\]|\{(.*?)\}/);
+  const answer = engMatch ? engMatch[1] || engMatch[2] : "";
+  const english = sentenceStr.replace(/\[.*?\]|\{.*?\}/, "___");
+
+  const meaningStr = (data.meaning || "").replace(/\r/g, "").trim();
+  const korMatch = meaningStr.match(/\[(.*?)\]|\{(.*?)\}/);
+  const koreanHighlight = korMatch ? korMatch[1] || korMatch[2] : "";
+  const korean = meaningStr.replace(/[\[\]{}]/g, "");
 
   return {
     id: String(data.sentenceId),
-    korean: (data.meaning || "").replace(/\r/g, "").trim(),
-    koreanHighlight: "",
+    korean,
+    koreanHighlight,
     english,
     answer,
     blankIndex: 0

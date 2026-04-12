@@ -37,7 +37,7 @@ export function DeckCard({ deck }: DeckCardProps) {
     setIsStarting(true)
     try {
       await startSession(deck.id, parseInt(questionCount, 10))
-      router.push(`/learn/${deck.id}`)
+      router.push(`/learn/${deck.id}?q=${questionCount}`)
     } catch (error) {
       console.error("Failed to start session:", error)
       setIsStarting(false)

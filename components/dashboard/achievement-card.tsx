@@ -32,7 +32,7 @@ export function AchievementCard({
   setIsStarting(true)
     try {
       await startSession(firstDeckId, dailyGoal) 
-      router.push(`/learn/${firstDeckId}`)
+      router.push(`/learn/${firstDeckId}?q=${dailyGoal}`)
     } catch (error: any) {
       console.error("Failed to start session:", error)
       toast.error(error.message || "Failed to start learning session. Please try again.")

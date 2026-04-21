@@ -10,15 +10,15 @@ export default async function LearnPage({
 }: { 
   searchParams: Promise<{ [key: string]: string | string[] | undefined }> 
 }) {
-  // Fetch session data initialized via the dashboard
-  const [sessionData, resolvedSearchParams] = await Promise.all([
-    getSessionQuestions(),
-    searchParams
-  ])
-
-  // Get total questions from query param 'q' or fallback to default
+  // Fetch search params first to pass to getSessionQuestions
+  const resolvedSearchParams = await searchParams
   const qParam = resolvedSearchParams.q
-  const totalQuestions = typeof qParam === 'string' ? parseInt(qParam, 10) : sessionData.totalQuestions
+  const count = typeof qParam === 'string' ? parseInt(qParam, 10) : undefined
+
+  // Fetch session data initialized via the dashboard
+  const sessionData = await getSessionQuestions(count)
+
+  const totalQuestions = count || sessionData.totalQuestions
 
   return (
     <LearningSession

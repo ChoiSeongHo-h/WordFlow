@@ -10,13 +10,18 @@ import { cn } from "@/lib/utils"
 interface DailyGoalSetterProps {
   goal: number
   onGoalChange: (newGoal: number) => void
+  completedWords?: number
   className?: string
 }
 
-export function DailyGoalSetter({ goal, onGoalChange, className }: DailyGoalSetterProps) {
+export function DailyGoalSetter({ goal, onGoalChange, completedWords = 0, className }: DailyGoalSetterProps) {
+  // Calculate minimum allowed goal based on completed words, rounded up to the nearest 5
+  // e.g., if completedWords is 7, minAllowedGoal is 10. If 0, minAllowedGoal is 5.
+  const minAllowedGoal = Math.max(5, Math.ceil(completedWords / 5) * 5)
+
   // Update goal using step buttons
   const adjustGoal = (amount: number) => {
-    const newGoal = Math.max(5, Math.min(100, goal + amount))
+    const newGoal = Math.max(minAllowedGoal, Math.min(100, goal + amount))
     onGoalChange(newGoal)
   }
 
@@ -38,14 +43,14 @@ export function DailyGoalSetter({ goal, onGoalChange, className }: DailyGoalSett
           size="icon"
           className="size-8 rounded-full shrink-0"
           onClick={() => adjustGoal(-5)}
-          disabled={goal <= 5}
+          disabled={goal <= minAllowedGoal}
         >
           <Minus className="size-3" />
         </Button>
         
         <Slider
           value={[goal]}
-          min={5}
+          min={minAllowedGoal}
           max={100}
           step={5}
           onValueChange={(value) => onGoalChange(value[0])}

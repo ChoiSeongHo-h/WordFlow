@@ -44,7 +44,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
     )
   }
 
-  if (!session.currentWord && session.status !== "complete") {
+  if (!session.currentWord) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -59,7 +59,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
       <header className="flex items-center justify-between px-4 py-3 md:px-8">
         <div className="flex flex-1 items-center gap-4">
           <span className="text-xs font-medium text-muted-foreground">
-            {session.currentIndex + 1} / {totalQuestions}
+            {session.completedCount} / {session.totalQuestions}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -101,6 +101,28 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
               />
             </div>
           )}
+
+          {/* Test Buttons (Temporary) */}
+          <div className="flex gap-3 opacity-20 hover:opacity-100 transition-opacity">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs border-success/50 text-success hover:bg-success/10"
+              onClick={() => session.currentWord && session.submitAnswer(session.currentWord.answer)}
+              disabled={session.status === "validating" || session.status === "correct"}
+            >
+              Correct (Test)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 text-xs border-destructive/50 text-destructive hover:bg-destructive/10"
+              onClick={() => session.submitAnswer("wrong_answer_test")}
+              disabled={session.status === "validating" || session.status === "correct"}
+            >
+              Incorrect (Test)
+            </Button>
+          </div>
 
           {/* Feedback Area */}
           <div className="flex h-20 w-full flex-col items-center justify-start gap-3 relative">

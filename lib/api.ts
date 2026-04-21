@@ -55,6 +55,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 export interface VerifyResponse {
   isCorrect: boolean;
   correctAnswer?: string;
+  solvedCount?: number;
+  targetCount?: number;
 }
 
 export function setAuthToken(token: string) {
@@ -126,7 +128,45 @@ export async function getDeckById(id: string): Promise<Deck | null> {
 }
 
 export async function getUserProgress(): Promise<UserProgress> {
-  return { dailyGoal: 10, dailyCompleted: 0, streak: 0, totalWordsLearned: 0, totalWords: 0 };
+  const token = getAuthToken();
+  const DEFAULT_GOAL = 10;
+  const LOCAL_STORAGE_KEY = "wordflow-daily-goal";
+
+  if (!token) {
+    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, totalWordsLearned: 0, totalWords: 0 };
+  }
+
+  try {
+    const [studyCountRes, streakRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/lesson/studyCount`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      }),
+      fetch(`${API_BASE_URL}/lesson/streak`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+    ]);
+
+    const dailyCompleted = studyCountRes.ok ? await studyCountRes.json() : 0;
+    const streakData = streakRes.ok ? await streakRes.json() : { streak: 0 };
+
+    // Get goal from localStorage (matching dashboard logic)
+    let dailyGoal = DEFAULT_GOAL;
+    if (typeof window !== "undefined") {
+      const savedGoal = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedGoal) dailyGoal = parseInt(savedGoal, 10);
+    }
+
+    return {
+      dailyGoal,
+      dailyCompleted: typeof dailyCompleted === "number" ? dailyCompleted : 0,
+      streak: streakData.streak || 0,
+      totalWordsLearned: 0,
+      totalWords: 0
+    };
+  } catch (error) {
+    console.error("Failed to fetch user progress:", error);
+    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, totalWordsLearned: 0, totalWords: 0 };
+  }
 }
 
 export async function startSession(deckId: string, count: number): Promise<void> {
@@ -180,12 +220,12 @@ export async function fetchNextWord(): Promise<WordItem | null> {
   };
 }
 
-export async function getSessionQuestions(): Promise<SessionData> {
+export async function getSessionQuestions(count?: number): Promise<SessionData> {
   // Return shell SessionData.
   return {
     deckId: "1",
     deckTitle: "Daily Lesson",
-    totalQuestions: 10,
+    totalQuestions: count || 10,
     words: [] 
   };
 }
@@ -201,8 +241,12 @@ export async function verifyAnswer(wordId: string, userInput: string): Promise<V
   }).catch(() => null);
 
   if (res && res.ok) {
-    const isCorrect = await res.json();
-    return { isCorrect };
+    const data = await res.json();
+    return { 
+      isCorrect: data.isCorrect,
+      solvedCount: data.finishCount,
+      targetCount: data.goalCount
+    };
   }
   return { isCorrect: false }; 
 }

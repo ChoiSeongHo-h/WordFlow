@@ -71,7 +71,11 @@ export function AchievementCard({
 
             {/* Integrated Goal Setter */}
             <div className="bg-muted/40 p-5 rounded-2xl border border-border/50">
-              <DailyGoalSetter goal={dailyGoal} onGoalChange={onGoalChange} />
+              <DailyGoalSetter 
+                goal={dailyGoal} 
+                onGoalChange={onGoalChange} 
+                completedWords={dailyCompleted} 
+              />
             </div>
 
             {/* Call to Action */}

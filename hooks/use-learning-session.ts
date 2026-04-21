@@ -1,6 +1,6 @@
 // hooks/use-learning-session.ts
 import { useState, useCallback, useEffect } from "react"
-import { verifyAnswer, fetchNextWord, type WordItem } from "@/lib/api"
+import { verifyAnswer, fetchNextWord, getUserProgress, type WordItem } from "@/lib/api"
 
 export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "hint" | "complete"
 
@@ -9,6 +9,7 @@ interface UseLearningSessionReturn {
   currentWord: WordItem | null
   status: SessionStatus
   completedCount: number
+  totalQuestions: number
   progressPercentage: number
   handleInputStart: () => void
   submitAnswer: (answer: string) => Promise<void>
@@ -17,23 +18,31 @@ interface UseLearningSessionReturn {
   resetSession: () => void
 }
 
-export function useLearningSession(deckId: string, totalQuestions: number): UseLearningSessionReturn {
+export function useLearningSession(deckId: string, initialTotalQuestions: number): UseLearningSessionReturn {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
+  const [totalQuestions, setTotalQuestions] = useState(initialTotalQuestions)
   const [status, setStatus] = useState<SessionStatus>("idle")
   const [currentWord, setCurrentWord] = useState<WordItem | null>(null)
 
-  const progressPercentage = Math.round((currentIndex / totalQuestions) * 100)
+  const progressPercentage = Math.round((completedCount / totalQuestions) * 100)
 
-  // Fetch initial word on mount
+  // Fetch initial word and progress on mount
   useEffect(() => {
-    fetchNextWord().then(word => {
-      if (word) {
-        setCurrentWord(word)
-      } else {
-        setStatus("complete") // If backend buffer is empty
-      }
-    }).catch(() => setStatus("complete"));
+    Promise.all([fetchNextWord(), getUserProgress()])
+      .then(([word, progress]) => {
+        if (word) {
+          setCurrentWord(word)
+        } else {
+          setStatus("complete") // If backend buffer is empty
+        }
+        
+        if (progress) {
+          setCompletedCount(progress.dailyCompleted)
+          setTotalQuestions(progress.dailyGoal)
+        }
+      })
+      .catch(() => setStatus("complete"));
   }, [deckId])
 
   const handleInputStart = useCallback(() => {
@@ -41,9 +50,8 @@ export function useLearningSession(deckId: string, totalQuestions: number): UseL
   }, [status])
 
   const moveToNext = useCallback(async () => {
-    if (currentIndex < totalQuestions - 1) {
-      const nextIndex = currentIndex + 1
-      setCurrentIndex(nextIndex)
+    if (completedCount < totalQuestions) {
+      setCurrentIndex((prev) => prev + 1)
       setStatus("validating")
       
       const nextWord = await fetchNextWord()
@@ -51,12 +59,13 @@ export function useLearningSession(deckId: string, totalQuestions: number): UseL
         setCurrentWord(nextWord)
         setStatus("idle")
       } else {
+        // 백엔드에서 더 이상 가져올 문제가 없으면 완료
         setStatus("complete")
       }
     } else {
       setStatus("complete")
     }
-  }, [currentIndex, totalQuestions])
+  }, [completedCount, totalQuestions])
 
   const submitAnswer = useCallback(async (answer: string) => {
     if (!answer || status === "validating" || status === "correct" || !currentWord) return
@@ -64,9 +73,13 @@ export function useLearningSession(deckId: string, totalQuestions: number): UseL
     setStatus("validating")
     try {
       const result = await verifyAnswer(currentWord.id, answer)
+      
+      // 백엔드에서 실시간으로 계산된 풀은 개수와 목표 개수로 업데이트
+      if (result.solvedCount !== undefined) setCompletedCount(result.solvedCount)
+      if (result.targetCount !== undefined) setTotalQuestions(result.targetCount)
+
       if (result.isCorrect) {
         setStatus("correct")
-        setCompletedCount((prev) => prev + 1)
         setTimeout(() => moveToNext(), 600)
       } else {
         setStatus("incorrect")
@@ -84,19 +97,27 @@ export function useLearningSession(deckId: string, totalQuestions: number): UseL
   const resetSession = useCallback(() => {
     setCurrentIndex(0)
     setStatus("idle")
-    setCompletedCount(0)
     setCurrentWord(null)
-    fetchNextWord().then(word => {
-      if (word) setCurrentWord(word)
-      else setStatus("complete")
-    })
-  }, [])
+    
+    Promise.all([fetchNextWord(), getUserProgress()])
+      .then(([word, progress]) => {
+        if (word) setCurrentWord(word)
+        else setStatus("complete")
+        
+        if (progress) {
+          setCompletedCount(progress.dailyCompleted)
+          setTotalQuestions(progress.dailyGoal)
+        }
+      })
+      .catch(() => setStatus("complete"))
+  }, [deckId])
 
   return {
     currentIndex,
     currentWord,
     status,
     completedCount,
+    totalQuestions,
     progressPercentage,
     handleInputStart,
     submitAnswer,

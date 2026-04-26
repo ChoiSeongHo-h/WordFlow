@@ -26,6 +26,8 @@ export interface UserProgress {
   maxStreak: number
   totalWordsLearned: number
   totalWords: number
+  avgAccuracy: number
+  uniqueWordsLearned: number
 }
 
 export interface SessionData {
@@ -239,17 +241,19 @@ export async function getUserProgress(): Promise<UserProgress> {
   const LOCAL_STORAGE_KEY = "wordflow-daily-goal";
 
   if (!token) {
-    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, maxStreak: 0, totalWordsLearned: 0, totalWords: 0 };
+    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, maxStreak: 0, totalWordsLearned: 0, totalWords: 0, avgAccuracy: 0, uniqueWordsLearned: 0 };
   }
 
   try {
-    const [studyCountRes, streakRes] = await Promise.all([
+    const [studyCountRes, streakRes, statsRes] = await Promise.all([
       apiFetch(`${API_BASE_URL}/lesson/studyCount`),
-      apiFetch(`${API_BASE_URL}/lesson/streak`)
+      apiFetch(`${API_BASE_URL}/lesson/streak`),
+      apiFetch(`${API_BASE_URL}/lesson/stats`)
     ]);
 
     const dailyCompleted = studyCountRes.ok ? await studyCountRes.json() : 0;
-    const streakData = streakRes.ok ? await streakRes.json() : { streak: 0 };
+    const streakData = streakRes.ok ? await streakRes.json() : { streak: 0, maxStreak: 0 };
+    const statsData = statsRes.ok ? await statsRes.json() : { totalWordsLearned: 0, totalWordsInSystem: 0, averageAccuracy: 0, uniqueWordsLearned: 0 };
 
     let dailyGoal = DEFAULT_GOAL;
     if (typeof window !== "undefined") {
@@ -262,12 +266,14 @@ export async function getUserProgress(): Promise<UserProgress> {
       dailyCompleted: typeof dailyCompleted === "number" ? dailyCompleted : 0,
       streak: streakData.streak || 0,
       maxStreak: streakData.maxStreak || 0,
-      totalWordsLearned: 0,
-      totalWords: 0
+      totalWordsLearned: statsData.totalWordsLearned || 0,
+      totalWords: statsData.totalWordsInSystem || 0,
+      avgAccuracy: statsData.averageAccuracy || 0,
+      uniqueWordsLearned: statsData.uniqueWordsLearned || 0
     };
   } catch (error) {
     console.error("Failed to fetch user progress:", error);
-    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, maxStreak: 0, totalWordsLearned: 0, totalWords: 0 };
+    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, maxStreak: 0, totalWordsLearned: 0, totalWords: 0, avgAccuracy: 0, uniqueWordsLearned: 0 };
   }
 }
 

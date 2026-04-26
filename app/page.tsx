@@ -153,24 +153,24 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-muted-foreground">Words Learned</p>
               </div>
               <p className="text-3xl font-bold text-foreground font-[family-name:var(--font-heading)]">
-                {userProgress.totalWordsLearned}
+                {userProgress.totalWordsLearned.toLocaleString()}
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full" 
-                    style={{ width: `${(userProgress.totalWordsLearned / userProgress.totalWords) * 100}%` }}
+                  <div
+                    className="h-full bg-blue-500 rounded-full"
+                    style={{ width: `${userProgress.totalWords > 0 ? (userProgress.uniqueWordsLearned / userProgress.totalWords) * 100 : 0}%` }}
                   />
                 </div>
                 <span className="text-[10px] text-muted-foreground font-medium">
-                  {Math.round((userProgress.totalWordsLearned / userProgress.totalWords) * 100)}%
+                  {userProgress.totalWords > 0 ? Math.round((userProgress.uniqueWordsLearned / userProgress.totalWords) * 100) : 0}%
                 </span>
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+              </Card>
 
-          <Card className="border-none shadow-sm bg-card/50 hover:bg-card transition-colors">
-            <CardContent className="p-6">
+              <Card className="border-none shadow-sm bg-card/50 hover:bg-card transition-colors">
+              <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                   <BarChart3 className="size-4" />
@@ -178,13 +178,16 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-muted-foreground">Avg. Accuracy</p>
               </div>
               <p className="text-3xl font-bold text-foreground font-[family-name:var(--font-heading)]">
-                87%
+                {Math.round(userProgress.avgAccuracy)}%
               </p>
               <p className="mt-1 text-xs font-medium text-muted-foreground italic">
-                Consistent performance
+                {userProgress.avgAccuracy >= 90 ? "Excellent accuracy!" : 
+                 userProgress.avgAccuracy >= 70 ? "Great job, keep it up!" :
+                 userProgress.avgAccuracy > 0 ? "Keep practicing to improve!" : "Start your first lesson!"}
               </p>
-            </CardContent>
-          </Card>
+              </CardContent>
+              </Card>
+
         </div>
       </main>
     </div>

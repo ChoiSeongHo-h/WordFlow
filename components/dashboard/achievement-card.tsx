@@ -14,25 +14,23 @@ interface AchievementCardProps {
   dailyCompleted: number
   dailyGoal: number
   onGoalChange: (newGoal: number) => void
-  firstDeckId?: string
 }
 
 export function AchievementCard({
   dailyCompleted,
   dailyGoal,
   onGoalChange,
-  firstDeckId,
 }: AchievementCardProps) {
   const router = useRouter()
   const [isStarting, setIsStarting] = React.useState(false)
 
   const handleStartNow = async () => {
-    if (!firstDeckId) return
+    const deckId = "1" // Default Daily Review deck ID
     
   setIsStarting(true)
     try {
-      await startSession(firstDeckId, dailyGoal) 
-      router.push(`/learn/${firstDeckId}?q=${dailyGoal}`)
+      await startSession(deckId, dailyGoal) 
+      router.push(`/learn/${deckId}?q=${dailyGoal}`)
     } catch (error: any) {
       console.error("Failed to start session:", error)
       toast.error(error.message || "Failed to start learning session. Please try again.")
@@ -79,13 +77,12 @@ export function AchievementCard({
             </div>
 
             {/* Call to Action */}
-            {firstDeckId && (
-              <Button 
-                size="lg" 
-                className="w-full h-12 text-base font-semibold gap-2 rounded-xl transition-all hover:gap-3"
-                onClick={handleStartNow}
-                disabled={isStarting}
-              >
+            <Button 
+              size="lg" 
+              className="w-full h-12 text-base font-semibold gap-2 rounded-xl transition-all hover:gap-3"
+              onClick={handleStartNow}
+              disabled={isStarting || dailyGoal <= dailyCompleted}
+            >
                 {isStarting ? (
                   <>
                     <Loader2 className="size-5 animate-spin" />
@@ -98,9 +95,8 @@ export function AchievementCard({
                   </>
                 )}
               </Button>
-            )}
+            </div>
           </div>
-        </div>
       </CardContent>
     </Card>
   )

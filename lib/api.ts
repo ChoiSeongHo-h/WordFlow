@@ -239,7 +239,7 @@ export async function getUserProgress(): Promise<UserProgress> {
   const LOCAL_STORAGE_KEY = "wordflow-daily-goal";
 
   if (!token) {
-    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, totalWordsLearned: 0, totalWords: 0 };
+    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, maxStreak: 0, totalWordsLearned: 0, totalWords: 0 };
   }
 
   try {

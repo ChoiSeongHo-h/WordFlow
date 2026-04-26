@@ -15,9 +15,8 @@ interface DailyGoalSetterProps {
 }
 
 export function DailyGoalSetter({ goal, onGoalChange, completedWords = 0, className }: DailyGoalSetterProps) {
-  // Calculate minimum allowed goal based on completed words, rounded up to the nearest 5
-  // e.g., if completedWords is 7, minAllowedGoal is 10. If 0, minAllowedGoal is 5.
-  const minAllowedGoal = Math.max(5, Math.ceil(completedWords / 5) * 5)
+  // Fixed minimum allowed goal
+  const minAllowedGoal = 5
 
   // Update goal using step buttons
   const adjustGoal = (amount: number) => {
@@ -67,10 +66,6 @@ export function DailyGoalSetter({ goal, onGoalChange, completedWords = 0, classN
           <Plus className="size-3" />
         </Button>
       </div>
-      
-      <p className="text-[11px] text-muted-foreground italic text-center">
-        Adjusting your goal will update your progress circle in real-time.
-      </p>
     </div>
   )
 }   

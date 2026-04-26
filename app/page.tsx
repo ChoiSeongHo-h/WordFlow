@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation"
 import { Flame, Zap, TrendingUp, Loader2, BookOpen, Target, BarChart3, Settings } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { DeckCard } from "@/components/deck-card"
 import { AchievementCard } from "@/components/dashboard/achievement-card"
 import { Calendar } from "@/components/ui/calendar"
-import { getDecks, getUserProgress, getMonthlyStreak, type Deck, type UserProgress } from "@/lib/api"
+import { getUserProgress, getMonthlyStreak, type UserProgress } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const LOCAL_STORAGE_KEY = "wordflow-daily-goal"
@@ -16,7 +15,6 @@ const DEFAULT_GOAL = 20
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [decks, setDecks] = React.useState<Deck[]>([])
   const [userProgress, setUserProgress] = React.useState<UserProgress | null>(null)
   const [activeDates, setActiveDates] = React.useState<Date[]>([])
   const [dailyGoal, setDailyGoal] = React.useState<number>(DEFAULT_GOAL)
@@ -33,8 +31,7 @@ export default function DashboardPage() {
     async function loadData() {
       try {
         const now = new Date();
-        const [decksData, progressData, streakDates] = await Promise.all([
-          getDecks(),
+        const [progressData, streakDates] = await Promise.all([
           getUserProgress(),
           getMonthlyStreak(now.getFullYear(), now.getMonth() + 1)
         ])
@@ -43,7 +40,6 @@ export default function DashboardPage() {
         const savedGoal = localStorage.getItem(LOCAL_STORAGE_KEY)
         const initialGoal = savedGoal ? parseInt(savedGoal, 10) : (progressData?.dailyGoal || DEFAULT_GOAL)
         
-        setDecks(decksData)
         setUserProgress(progressData)
         setActiveDates(streakDates.map(d => new Date(d)))
         setDailyGoal(initialGoal)
@@ -108,7 +104,6 @@ export default function DashboardPage() {
             dailyCompleted={userProgress.dailyCompleted}
             dailyGoal={dailyGoal}
             onGoalChange={handleGoalChange}
-            firstDeckId={decks.length > 0 ? decks[0].id : undefined}
           />
 
           {/* Streak Status Card - Monthly Calendar View */}
@@ -143,14 +138,13 @@ export default function DashboardPage() {
                     <TrendingUp className="size-3.5 text-orange-500" />
                     Personal Best: {userProgress.maxStreak}
                   </span>
-                  <span className="text-muted-foreground/50">Keep pushing</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Secondary Stats */}
-          <Card className="border-none shadow-sm bg-card/50 hover:bg-card transition-colors">
+          <Card className="md:col-span-2 border-none shadow-sm bg-card/50 hover:bg-card transition-colors">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
@@ -178,23 +172,6 @@ export default function DashboardPage() {
           <Card className="border-none shadow-sm bg-card/50 hover:bg-card transition-colors">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
-                  <Target className="size-4" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">Decks Active</p>
-              </div>
-              <p className="text-3xl font-bold text-foreground font-[family-name:var(--font-heading)]">
-                {decks.filter((d) => d.completed > 0).length}
-              </p>
-              <p className="mt-1 text-xs font-medium text-muted-foreground">
-                Out of {decks.length} collections
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm bg-card/50 hover:bg-card transition-colors">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                   <BarChart3 className="size-4" />
                 </div>
@@ -209,29 +186,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Deck Library Section */}
-        <section className="mt-16">
-          <div className="mb-8 flex items-end justify-between">
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground font-[family-name:var(--font-heading)]">
-                Your Word Decks
-              </h2>
-              <p className="text-sm text-muted-foreground">Select a deck to continue your flow.</p>
-            </div>
-            <div className="hidden sm:block px-3 py-1 rounded-md bg-muted text-[11px] font-bold uppercase tracking-tighter text-muted-foreground">
-              {decks.length} Decks Available
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {decks.map((deck) => (
-              <div key={deck.id} className="group transition-transform duration-300 hover:-translate-y-1">
-                <DeckCard deck={deck} />
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
     </div>
   )

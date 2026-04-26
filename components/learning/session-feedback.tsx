@@ -1,9 +1,6 @@
 // components/learning/session-feedback.tsx
-"use client"
-
-import { Check, Eye, ArrowRight } from "lucide-react"
+import { Check, Eye, ArrowRight, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Kbd } from "@/components/ui/kbd" // UI 라이브러리에 Kbd가 있다고 가정하거나 기본 kbd 태그 사용
 import type { WordItem } from "@/lib/api"
 import type { SessionStatus } from "@/hooks/use-learning-session"
 
@@ -12,9 +9,32 @@ interface SessionFeedbackProps {
   currentWord: WordItem
   onShowHint: () => void
   onNext: () => void
+  lastUserInput?: string
+  resultCorrectAnswer?: string
 }
 
-export function SessionFeedback({ status, currentWord, onShowHint, onNext }: SessionFeedbackProps) {
+function TypoDiff({ user, correct }: { user: string; correct: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs md:text-sm font-medium">
+      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive/70 line-through decoration-destructive/30">
+        {user}
+      </span>
+      <ArrowRight className="size-3 text-muted-foreground/30" />
+      <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning-foreground font-bold animate-pulse">
+        {correct}
+      </span>
+    </div>
+  )
+}
+
+export function SessionFeedback({ 
+  status, 
+  currentWord, 
+  onShowHint, 
+  onNext,
+  lastUserInput,
+  resultCorrectAnswer
+}: SessionFeedbackProps) {
   if (status === "correct") {
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
@@ -29,6 +49,25 @@ export function SessionFeedback({ status, currentWord, onShowHint, onNext }: Ses
           </Button>
           <p className="text-[10px] text-muted-foreground/50">
             Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> to skip
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === "typo") {
+    return (
+      <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-2 text-warning">
+          <AlertCircle className="size-4" />
+          <span className="font-semibold text-sm">Typo!</span>
+        </div>
+        {lastUserInput && resultCorrectAnswer && (
+          <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
+        )}
+        <div className="flex flex-col items-center gap-2 mt-1">
+          <p className="text-[10px] text-muted-foreground/50">
+            Continuing in a moment...
           </p>
         </div>
       </div>

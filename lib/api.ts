@@ -54,6 +54,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export interface VerifyResponse {
   isCorrect: boolean;
+  isTypo?: boolean;
   correctAnswer?: string;
   solvedCount?: number;
   targetCount?: number;
@@ -244,8 +245,10 @@ export async function verifyAnswer(wordId: string, userInput: string): Promise<V
     const data = await res.json();
     return { 
       isCorrect: data.isCorrect,
-      solvedCount: data.finishCount,
-      targetCount: data.goalCount
+      isTypo: data.isTypo,
+      correctAnswer: data.correctAnswer,
+      solvedCount: data.solvedCount || data.finishCount,
+      targetCount: data.targetCount || data.goalCount
     };
   }
   return { isCorrect: false }; 

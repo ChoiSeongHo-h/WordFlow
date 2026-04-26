@@ -89,12 +89,13 @@ export function SentenceInput({
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          disabled={status === "correct" || status === "validating"}
+          disabled={status === "correct" || status === "typo" || status === "validating"}
           className={cn(
             "inline-block bg-transparent text-center text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
             "border-b-2 placeholder:text-transparent w-16",
             status === "idle" && "border-muted-foreground/30 focus:border-primary text-primary",
             status === "correct" && "border-success text-success animate-spring-pop",
+            status === "typo" && "border-warning text-warning animate-spring-pop",
             status === "incorrect" && "border-destructive text-destructive animate-shake",
             status === "validating" && "opacity-50"
           )}

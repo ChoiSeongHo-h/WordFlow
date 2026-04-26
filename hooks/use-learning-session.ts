@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { verifyAnswer, fetchNextWord, getUserProgress, type WordItem } from "@/lib/api"
 
-export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "hint" | "complete"
+export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "typo" | "hint" | "complete"
 
 interface UseLearningSessionReturn {
   currentIndex: number
@@ -11,6 +11,8 @@ interface UseLearningSessionReturn {
   completedCount: number
   totalQuestions: number
   progressPercentage: number
+  lastUserInput: string
+  resultCorrectAnswer: string
   handleInputStart: () => void
   submitAnswer: (answer: string) => Promise<void>
   showHint: () => void
@@ -24,6 +26,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   const [totalQuestions, setTotalQuestions] = useState(initialTotalQuestions)
   const [status, setStatus] = useState<SessionStatus>("idle")
   const [currentWord, setCurrentWord] = useState<WordItem | null>(null)
+  const [lastUserInput, setLastUserInput] = useState("")
+  const [resultCorrectAnswer, setResultCorrectAnswer] = useState("")
   const isMovingRef = useRef(false)
 
   const progressPercentage = Math.round((completedCount / totalQuestions) * 100)
@@ -77,9 +81,10 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   }, [completedCount, totalQuestions])
 
   const submitAnswer = useCallback(async (answer: string) => {
-    if (!answer || status === "validating" || status === "correct" || !currentWord) return
+    if (!answer || status === "validating" || status === "correct" || status === "typo" || !currentWord) return
 
     setStatus("validating")
+    setLastUserInput(answer)
     try {
       const result = await verifyAnswer(currentWord.id, answer)
       
@@ -88,12 +93,18 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       if (result.targetCount !== undefined) setTotalQuestions(result.targetCount)
 
       if (result.isCorrect) {
-        setStatus("correct")
+        if (result.isTypo) {
+          setStatus("typo")
+          setResultCorrectAnswer(result.correctAnswer || currentWord.answer)
+        } else {
+          setStatus("correct")
+        }
         
         if (typeof window !== "undefined" && "speechSynthesis" in window) {
           window.speechSynthesis.cancel()
           
-          const fullSentence = currentWord.english.replace(/_+/g, currentWord.answer)
+          const finalAnswer = result.isCorrect ? (result.correctAnswer || currentWord.answer) : currentWord.answer
+          const fullSentence = currentWord.english.replace(/_+/g, finalAnswer)
           const utterance = new SpeechSynthesisUtterance(fullSentence)
           utterance.lang = "en-US"
           
@@ -142,6 +153,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     completedCount,
     totalQuestions,
     progressPercentage,
+    lastUserInput,
+    resultCorrectAnswer,
     handleInputStart,
     submitAnswer,
     showHint,

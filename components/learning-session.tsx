@@ -28,7 +28,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
       session.resetSession()
     } else if (session.status === "incorrect") {
       session.showHint()
-    } else if (session.status === "hint" || session.status === "correct") {
+    } else if (session.status === "hint" || session.status === "correct" || session.status === "typo") {
       session.moveToNext()
     }
   })
@@ -132,6 +132,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 currentWord={session.currentWord} 
                 onShowHint={session.showHint} 
                 onNext={session.moveToNext} 
+                lastUserInput={session.lastUserInput}
+                resultCorrectAnswer={session.resultCorrectAnswer}
               />
             )}
           </div>

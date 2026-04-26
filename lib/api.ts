@@ -38,6 +38,7 @@ export interface AuthResponse {
   success: boolean;
   user: { email: string };
   token: string;
+  refreshToken?: string;
   error?: string;
 }
 
@@ -73,10 +74,108 @@ export function getAuthToken() {
   return null;
 }
 
+export function setRefreshToken(token: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("flow_refresh_token", token);
+  }
+}
+
+export function getRefreshToken() {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("flow_refresh_token");
+  }
+  return null;
+}
+
 export function removeAuthToken() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("flow_token");
+    localStorage.removeItem("flow_refresh_token");
   }
+}
+
+// Token refresh state
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.map((callback) => callback(token));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(callback: (token: string) => void) {
+  refreshSubscribers.push(callback);
+}
+
+/**
+ * Enhanced fetch wrapper that automatically handles Bearer token injection
+ * and token refresh logic on 401 Unauthorized errors.
+ */
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = getAuthToken();
+  const headers = {
+    ...options.headers,
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+  } as Record<string, string>;
+
+  const res = await fetch(url, { ...options, headers });
+
+  // If unauthorized, try to refresh the token
+  if (res.status === 401) {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      removeAuthToken();
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/signup")) {
+        window.location.href = "/login";
+      }
+      return res;
+    }
+
+    if (!isRefreshing) {
+      isRefreshing = true;
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/token`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: refreshToken
+        });
+
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          setAuthToken(data.accessToken);
+          setRefreshToken(data.refreshToken);
+          isRefreshing = false;
+          onTokenRefreshed(data.accessToken);
+        } else {
+          isRefreshing = false;
+          removeAuthToken();
+          if (typeof window !== "undefined") window.location.href = "/login";
+          return res;
+        }
+      } catch (error) {
+        console.error("Token refresh failed:", error);
+        isRefreshing = false;
+        removeAuthToken();
+        if (typeof window !== "undefined") window.location.href = "/login";
+        return res;
+      }
+    }
+
+    // If already refreshing, queue this request
+    return new Promise((resolve) => {
+      addRefreshSubscriber((newToken) => {
+        resolve(fetch(url, {
+          ...options,
+          headers: {
+            ...headers,
+            "Authorization": `Bearer ${newToken}`
+          }
+        }));
+      });
+    });
+  }
+
+  return res;
 }
 
 export function saveProgressLocally(deckId: string, currentIndex: number, completedCount: number) {}
@@ -93,10 +192,16 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     throw new Error(text || "Login failed");
   }
   const data = await res.json();
+  
+  // Store both tokens
+  if (data.accessToken) setAuthToken(data.accessToken);
+  if (data.refreshToken) setRefreshToken(data.refreshToken);
+
   return {
     success: true,
     user: { email: credentials.email },
-    token: data.accessToken
+    token: data.accessToken,
+    refreshToken: data.refreshToken
   };
 }
 
@@ -118,7 +223,6 @@ export async function signup(userData: SignupData): Promise<AuthResponse> {
 }
 
 export async function getDecks(): Promise<Deck[]> {
-  // Mock data for decks as backend doesn't have it yet
   return [
     { id: "1", title: "Daily Review", description: "Review your words", icon: "book", completed: 0, total: 10, words: [] }
   ];
@@ -139,18 +243,13 @@ export async function getUserProgress(): Promise<UserProgress> {
 
   try {
     const [studyCountRes, streakRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/lesson/studyCount`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      }),
-      fetch(`${API_BASE_URL}/lesson/streak`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      })
+      apiFetch(`${API_BASE_URL}/lesson/studyCount`),
+      apiFetch(`${API_BASE_URL}/lesson/streak`)
     ]);
 
     const dailyCompleted = studyCountRes.ok ? await studyCountRes.json() : 0;
     const streakData = streakRes.ok ? await streakRes.json() : { streak: 0 };
 
-    // Get goal from localStorage (matching dashboard logic)
     let dailyGoal = DEFAULT_GOAL;
     if (typeof window !== "undefined") {
       const savedGoal = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -171,32 +270,19 @@ export async function getUserProgress(): Promise<UserProgress> {
 }
 
 export async function startSession(deckId: string, count: number): Promise<void> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error("User is not authenticated. Please log in.");
-  }
-
-  const res = await fetch(`${API_BASE_URL}/lesson/testCount?testCount=${count}`, {
-    method: "POST",
-    headers: { 
-      "Authorization": `Bearer ${token}`
-    }
+  const res = await apiFetch(`${API_BASE_URL}/lesson/testCount?testCount=${count}`, {
+    method: "POST"
   });
 
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      removeAuthToken();
-      throw new Error("Your session has expired or you are not authorized. Please log in again.");
-    }
     const errorText = await res.text();
     throw new Error(errorText || "Failed to start session");
   }
 }
 
 export async function fetchNextWord(): Promise<WordItem | null> {
-  const res = await fetch(`${API_BASE_URL}/lesson/test`, { 
-    cache: 'no-store',
-    headers: { "Authorization": `Bearer ${getAuthToken()}` }
+  const res = await apiFetch(`${API_BASE_URL}/lesson/test`, { 
+    cache: 'no-store'
   });
   if (!res.ok) return null;
   const data = await res.json();
@@ -222,7 +308,6 @@ export async function fetchNextWord(): Promise<WordItem | null> {
 }
 
 export async function getSessionQuestions(count?: number): Promise<SessionData> {
-  // Return shell SessionData.
   return {
     deckId: "1",
     deckTitle: "Daily Lesson",
@@ -232,11 +317,10 @@ export async function getSessionQuestions(count?: number): Promise<SessionData> 
 }
 
 export async function verifyAnswer(wordId: string, userInput: string): Promise<VerifyResponse> {
-  const res = await fetch(`${API_BASE_URL}/lesson/test`, {
+  const res = await apiFetch(`${API_BASE_URL}/lesson/test`, {
     method: "POST",
     headers: { 
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${getAuthToken()}`
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({ sentenceId: Number(wordId), answer: userInput }),
   }).catch(() => null);

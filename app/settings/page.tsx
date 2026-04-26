@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 
+import { removeAuthToken } from "@/lib/api"
+
 export default function SettingsPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -21,7 +23,7 @@ export default function SettingsPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("flow_token")
+    removeAuthToken()
     localStorage.removeItem("wordflow-daily-goal")
     toast({
       title: "Logged out",

@@ -23,6 +23,7 @@ export interface UserProgress {
   dailyGoal: number
   dailyCompleted: number
   streak: number
+  maxStreak: number
   totalWordsLearned: number
   totalWords: number
 }
@@ -260,13 +261,20 @@ export async function getUserProgress(): Promise<UserProgress> {
       dailyGoal,
       dailyCompleted: typeof dailyCompleted === "number" ? dailyCompleted : 0,
       streak: streakData.streak || 0,
+      maxStreak: streakData.maxStreak || 0,
       totalWordsLearned: 0,
       totalWords: 0
     };
   } catch (error) {
     console.error("Failed to fetch user progress:", error);
-    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, totalWordsLearned: 0, totalWords: 0 };
+    return { dailyGoal: DEFAULT_GOAL, dailyCompleted: 0, streak: 0, maxStreak: 0, totalWordsLearned: 0, totalWords: 0 };
   }
+}
+
+export async function getMonthlyStreak(year: number, month: number): Promise<string[]> {
+  const res = await apiFetch(`${API_BASE_URL}/lesson/monthly-streak?year=${year}&month=${month}`);
+  if (!res.ok) return [];
+  return await res.json();
 }
 
 export async function startSession(deckId: string, count: number): Promise<void> {

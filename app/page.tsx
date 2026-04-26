@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { DeckCard } from "@/components/deck-card"
 import { AchievementCard } from "@/components/dashboard/achievement-card"
-import { getDecks, getUserProgress, type Deck, type UserProgress } from "@/lib/api"
+import { Calendar } from "@/components/ui/calendar"
+import { getDecks, getUserProgress, getMonthlyStreak, type Deck, type UserProgress } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const LOCAL_STORAGE_KEY = "wordflow-daily-goal"
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [decks, setDecks] = React.useState<Deck[]>([])
   const [userProgress, setUserProgress] = React.useState<UserProgress | null>(null)
+  const [activeDates, setActiveDates] = React.useState<Date[]>([])
   const [dailyGoal, setDailyGoal] = React.useState<number>(DEFAULT_GOAL)
   const [isLoading, setIsLoading] = React.useState(true)
 
@@ -30,9 +32,11 @@ export default function DashboardPage() {
 
     async function loadData() {
       try {
-        const [decksData, progressData] = await Promise.all([
+        const now = new Date();
+        const [decksData, progressData, streakDates] = await Promise.all([
           getDecks(),
-          getUserProgress()
+          getUserProgress(),
+          getMonthlyStreak(now.getFullYear(), now.getMonth() + 1)
         ])
         
         // Load goal from localStorage or API
@@ -41,6 +45,7 @@ export default function DashboardPage() {
         
         setDecks(decksData)
         setUserProgress(progressData)
+        setActiveDates(streakDates.map(d => new Date(d)))
         setDailyGoal(initialGoal)
       } catch (error) {
         console.error("Failed to load dashboard data:", error)
@@ -82,12 +87,6 @@ export default function DashboardPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-full bg-accent/50 border border-border/50 px-4 py-1.5 transition-colors hover:bg-accent">
-              <Flame className="size-4 text-orange-500 fill-orange-500" />
-              <span className="text-sm font-bold text-foreground">
-                {userProgress.streak} day streak
-              </span>
-            </div>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -112,11 +111,11 @@ export default function DashboardPage() {
             firstDeckId={decks.length > 0 ? decks[0].id : undefined}
           />
 
-          {/* Streak Status Card - Redesigned for "Desire to Fill" */}
+          {/* Streak Status Card - Monthly Calendar View */}
           <Card className="border-border/30 shadow-sm bg-card/40 hover:bg-card/60 transition-colors backdrop-blur-sm">
-            <CardContent className="flex h-full flex-col justify-between gap-6 p-6">
+            <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Current Flow</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Flow History</p>
                 <div className="mt-4 flex items-baseline gap-2">
                   <Flame className="size-8 text-orange-500 fill-orange-500 animate-pulse" style={{ animationDuration: '3s' }} />
                   <span className="text-5xl font-black text-foreground font-[family-name:var(--font-heading)] tracking-tighter">
@@ -126,28 +125,23 @@ export default function DashboardPage() {
                 </div>
               </div>
               
+              <div className="flex-1 flex items-center justify-center py-2">
+                <Calendar
+                  mode="multiple"
+                  selected={activeDates}
+                  className="p-0 border-none pointer-events-none scale-90 origin-center"
+                  classNames={{
+                    selected: "![&_button]:bg-orange-500 ![&_button]:text-white ![&_button]:opacity-100",
+                    today: "bg-accent text-accent-foreground border border-orange-500/50 rounded-md",
+                  }}
+                />
+              </div>
+
               <div className="space-y-3">
-                {/* Continuous visual blocks representing a week to trigger completion desire */}
-                <div className="flex gap-1.5 p-1.5 rounded-full bg-muted/50 border border-border/50">
-                  {Array.from({ length: 7 }).map((_, i) => {
-                    const isCompleted = i < (userProgress?.streak || 0);
-                    const isToday = i === (userProgress?.streak || 0) - 1;
-                    return (
-                      <div
-                        key={i}
-                        className={cn(
-                          "h-3 flex-1 rounded-full transition-all duration-700",
-                          isCompleted ? "bg-orange-500" : "bg-muted-foreground/15",
-                          isToday && "shadow-[0_0_12px_rgba(249,115,22,0.6)] scale-105" // Glow effect for current streak day
-                        )}
-                      />
-                    );
-                  })}
-                </div>
                 <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <TrendingUp className="size-3.5 text-orange-500" />
-                    Personal Best: 14
+                    Personal Best: {userProgress.maxStreak}
                   </span>
                   <span className="text-muted-foreground/50">Keep pushing</span>
                 </div>

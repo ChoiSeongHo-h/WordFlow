@@ -1,5 +1,5 @@
 // hooks/use-learning-session.ts
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { verifyAnswer, fetchNextWord, getUserProgress, type WordItem } from "@/lib/api"
 
 export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "hint" | "complete"
@@ -24,6 +24,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   const [totalQuestions, setTotalQuestions] = useState(initialTotalQuestions)
   const [status, setStatus] = useState<SessionStatus>("idle")
   const [currentWord, setCurrentWord] = useState<WordItem | null>(null)
+  const isMovingRef = useRef(false)
 
   const progressPercentage = Math.round((completedCount / totalQuestions) * 100)
 
@@ -50,7 +51,14 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   }, [status])
 
   const moveToNext = useCallback(async () => {
+    if (isMovingRef.current) return
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+    }
+
     if (completedCount < totalQuestions) {
+      isMovingRef.current = true
       setCurrentIndex((prev) => prev + 1)
       setStatus("validating")
       
@@ -62,6 +70,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         // 백엔드에서 더 이상 가져올 문제가 없으면 완료
         setStatus("complete")
       }
+      isMovingRef.current = false
     } else {
       setStatus("complete")
     }
@@ -80,7 +89,21 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
 
       if (result.isCorrect) {
         setStatus("correct")
-        setTimeout(() => moveToNext(), 600)
+        
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel()
+          
+          const fullSentence = currentWord.english.replace(/_+/g, currentWord.answer)
+          const utterance = new SpeechSynthesisUtterance(fullSentence)
+          utterance.lang = "en-US"
+          
+          utterance.onend = () => moveToNext()
+          utterance.onerror = () => moveToNext()
+          
+          window.speechSynthesis.speak(utterance)
+        } else {
+          setTimeout(() => moveToNext(), 1500)
+        }
       } else {
         setStatus("incorrect")
       }

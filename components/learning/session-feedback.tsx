@@ -17,9 +17,20 @@ interface SessionFeedbackProps {
 export function SessionFeedback({ status, currentWord, onShowHint, onNext }: SessionFeedbackProps) {
   if (status === "correct") {
     return (
-      <div className="flex items-center gap-2 text-success animate-in fade-in zoom-in-95 duration-200">
-        <Check className="size-5" />
-        <span className="font-medium">Correct!</span>
+      <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-2 text-success">
+          <Check className="size-5" />
+          <span className="font-medium">Correct!</span>
+        </div>
+        <div className="flex flex-col items-center gap-2 mt-2">
+          <Button size="sm" onClick={onNext} className="gap-1.5" variant="outline">
+            Next Word
+            <ArrowRight className="size-3.5" />
+          </Button>
+          <p className="text-[10px] text-muted-foreground/50">
+            Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> to skip
+          </p>
+        </div>
       </div>
     )
   }

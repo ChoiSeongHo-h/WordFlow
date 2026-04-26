@@ -28,7 +28,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
       session.resetSession()
     } else if (session.status === "incorrect") {
       session.showHint()
-    } else if (session.status === "hint") {
+    } else if (session.status === "hint" || session.status === "correct") {
       session.moveToNext()
     }
   })

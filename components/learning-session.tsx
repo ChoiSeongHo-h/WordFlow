@@ -28,7 +28,11 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
       session.resetSession()
     } else if (session.status === "incorrect") {
       session.showHint()
-    } else if (session.status === "hint" || session.status === "correct" || session.status === "typo") {
+    } else if (session.status === "jumbled") {
+      session.submitJumbledAnswer()
+    } else if (session.status === "jumbled_incorrect") {
+      session.showFinalAnswer()
+    } else if (session.status === "show_answer" || session.status === "correct" || session.status === "typo") {
       session.moveToNext()
     }
   })
@@ -98,6 +102,10 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onSubmit={session.submitAnswer}
                 onHintRequest={session.showHint}
                 onSkip={session.moveToNext}
+                placedLetters={session.placedLetters}
+                onRemoveLetter={session.removePlacedLetter}
+                jumbledLetters={session.jumbledLetters}
+                onAddLetter={session.addPlacedLetter}
               />
             </div>
           )}
@@ -125,7 +133,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           </div>
 
           {/* Feedback Area */}
-          <div className="flex h-20 w-full flex-col items-center justify-start gap-3 relative">
+          <div className="flex min-h-[6rem] w-full flex-col items-center justify-start gap-3 relative">
             {session.currentWord && (
               <SessionFeedback 
                 status={session.status} 
@@ -134,6 +142,11 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onNext={session.moveToNext} 
                 lastUserInput={session.lastUserInput}
                 resultCorrectAnswer={session.resultCorrectAnswer}
+                jumbledLetters={session.jumbledLetters}
+                placedLetters={session.placedLetters}
+                onAddLetter={session.addPlacedLetter}
+                onSubmitJumbled={session.submitJumbledAnswer}
+                onShowFinalAnswer={session.showFinalAnswer}
               />
             )}
           </div>

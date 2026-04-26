@@ -1,8 +1,9 @@
 // components/learning/session-feedback.tsx
-import { Check, Eye, ArrowRight, AlertCircle } from "lucide-react"
+import { Check, Eye, ArrowRight, AlertCircle, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import type { WordItem } from "@/lib/api"
-import type { SessionStatus } from "@/hooks/use-learning-session"
+import type { SessionStatus, JumbledLetter } from "@/hooks/use-learning-session"
 
 interface SessionFeedbackProps {
   status: SessionStatus
@@ -11,6 +12,11 @@ interface SessionFeedbackProps {
   onNext: () => void
   lastUserInput?: string
   resultCorrectAnswer?: string
+  jumbledLetters?: JumbledLetter[]
+  placedLetters?: JumbledLetter[]
+  onAddLetter?: (letter: JumbledLetter) => void
+  onSubmitJumbled?: () => void
+  onShowFinalAnswer?: () => void
 }
 
 function TypoDiff({ user, correct }: { user: string; correct: string }) {
@@ -33,7 +39,12 @@ export function SessionFeedback({
   onShowHint, 
   onNext,
   lastUserInput,
-  resultCorrectAnswer
+  resultCorrectAnswer,
+  jumbledLetters = [],
+  placedLetters = [],
+  onAddLetter,
+  onSubmitJumbled,
+  onShowFinalAnswer
 }: SessionFeedbackProps) {
   if (status === "correct") {
     return (
@@ -88,7 +99,57 @@ export function SessionFeedback({
     )
   }
 
-  if (status === "hint") {
+  if (status === "jumbled" || status === "jumbled_incorrect") {
+    return (
+      <div className="flex flex-col items-center gap-4 animate-in slide-in-from-bottom-2 duration-300 w-full max-w-md">
+        <div className="flex flex-wrap justify-center gap-2">
+          {jumbledLetters.map((letter) => {
+            const isPlaced = placedLetters.some(pl => pl.id === letter.id)
+            return (
+              <Button
+                key={letter.id}
+                variant="secondary"
+                size="sm"
+                className={cn(
+                  "h-9 min-w-[2.25rem] font-bold text-lg transition-all",
+                  letter.char === " " && "bg-muted/50",
+                  isPlaced && "opacity-0 pointer-events-none"
+                )}
+                style={{ viewTransitionName: isPlaced ? "none" : `letter-${letter.id}` } as React.CSSProperties}
+                onClick={() => onAddLetter?.(letter)}
+              >
+                {letter.char === " " ? "\u00A0" : letter.char}
+              </Button>
+            )
+          })}
+        </div>
+        
+        <div className="flex flex-col items-center gap-2">
+          {status === "jumbled_incorrect" ? (
+            <Button variant="destructive" size="sm" onClick={onShowFinalAnswer} className="gap-2">
+              <Eye className="size-4" />
+              Show Answer
+            </Button>
+          ) : (
+            <Button 
+              size="sm" 
+              onClick={onSubmitJumbled} 
+              className="gap-2"
+              disabled={placedLetters.length !== jumbledLetters.length}
+            >
+              <Send className="size-4" />
+              Submit
+            </Button>
+          )}
+          <p className="text-[10px] text-muted-foreground/50">
+            {status === "jumbled_incorrect" ? "Order is incorrect. Try again or show answer." : "Arrange all letters to submit"}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === "show_answer") {
     return (
       <div className="flex flex-col items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
         <p className="text-sm text-muted-foreground">

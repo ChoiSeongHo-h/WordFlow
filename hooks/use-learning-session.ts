@@ -2,7 +2,12 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { verifyAnswer, fetchNextWord, getUserProgress, type WordItem } from "@/lib/api"
 
-export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "typo" | "hint" | "complete"
+export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "typo" | "jumbled" | "jumbled_incorrect" | "show_answer" | "complete"
+
+export interface JumbledLetter {
+  id: string
+  char: string
+}
 
 interface UseLearningSessionReturn {
   currentIndex: number
@@ -13,9 +18,15 @@ interface UseLearningSessionReturn {
   progressPercentage: number
   lastUserInput: string
   resultCorrectAnswer: string
+  jumbledLetters: JumbledLetter[]
+  placedLetters: JumbledLetter[]
   handleInputStart: () => void
   submitAnswer: (answer: string) => Promise<void>
-  showHint: () => void
+  showHint: () => void // This will now trigger jumbled mode
+  addPlacedLetter: (letter: JumbledLetter) => void
+  removePlacedLetter: (letter: JumbledLetter) => void
+  submitJumbledAnswer: () => void
+  showFinalAnswer: () => void
   moveToNext: () => void
   resetSession: () => void
 }
@@ -28,6 +39,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   const [currentWord, setCurrentWord] = useState<WordItem | null>(null)
   const [lastUserInput, setLastUserInput] = useState("")
   const [resultCorrectAnswer, setResultCorrectAnswer] = useState("")
+  const [jumbledLetters, setJumbledLetters] = useState<JumbledLetter[]>([])
+  const [placedLetters, setPlacedLetters] = useState<JumbledLetter[]>([])
   const isMovingRef = useRef(false)
 
   const progressPercentage = Math.round((completedCount / totalQuestions) * 100)
@@ -69,6 +82,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       const nextWord = await fetchNextWord()
       if (nextWord) {
         setCurrentWord(nextWord)
+        setJumbledLetters([])
+        setPlacedLetters([])
         setStatus("idle")
       } else {
         // 백엔드에서 더 이상 가져올 문제가 없으면 완료
@@ -125,13 +140,83 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   }, [currentWord, status, moveToNext])
 
   const showHint = useCallback(() => {
-    if (status === "incorrect") setStatus("hint")
+    if (status === "incorrect" && currentWord) {
+      const letters = currentWord.answer.split("").map((char, index) => ({
+        id: `${char}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+        char
+      }))
+      
+      // Shuffle letters
+      const shuffled = [...letters].sort(() => Math.random() - 0.5)
+      
+      setJumbledLetters(shuffled)
+      setPlacedLetters([])
+      setStatus("jumbled")
+    }
+  }, [status, currentWord])
+
+  const addPlacedLetter = useCallback((letter: JumbledLetter) => {
+    if (status !== "jumbled" && status !== "jumbled_incorrect") return
+    
+    const update = () => {
+      setPlacedLetters(prev => [...prev, letter])
+      if (status === "jumbled_incorrect") setStatus("jumbled")
+    }
+
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      document.documentElement.classList.add("jumbled-transition")
+      const transition = (document as any).startViewTransition(update)
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove("jumbled-transition")
+      })
+    } else {
+      update()
+    }
+  }, [status])
+
+  const removePlacedLetter = useCallback((letter: JumbledLetter) => {
+    if (status !== "jumbled" && status !== "jumbled_incorrect") return
+
+    const update = () => {
+      setPlacedLetters(prev => prev.filter(l => l.id !== letter.id))
+      if (status === "jumbled_incorrect") setStatus("jumbled")
+    }
+
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      document.documentElement.classList.add("jumbled-transition")
+      const transition = (document as any).startViewTransition(update)
+      transition.finished.finally(() => {
+        document.documentElement.classList.remove("jumbled-transition")
+      })
+    } else {
+      update()
+    }
+  }, [status])
+
+  const submitJumbledAnswer = useCallback(() => {
+    if ((status !== "jumbled" && status !== "jumbled_incorrect") || !currentWord) return
+    
+    const submittedAnswer = placedLetters.map(l => l.char).join("")
+    if (submittedAnswer === currentWord.answer) {
+      setStatus("correct")
+      setTimeout(() => moveToNext(), 1500)
+    } else {
+      setStatus("jumbled_incorrect")
+    }
+  }, [status, currentWord, placedLetters, moveToNext])
+
+  const showFinalAnswer = useCallback(() => {
+    if (status === "jumbled_incorrect") {
+      setStatus("show_answer")
+    }
   }, [status])
 
   const resetSession = useCallback(() => {
     setCurrentIndex(0)
     setStatus("idle")
     setCurrentWord(null)
+    setJumbledLetters([])
+    setPlacedLetters([])
     
     Promise.all([fetchNextWord(), getUserProgress()])
       .then(([word, progress]) => {
@@ -155,9 +240,15 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     progressPercentage,
     lastUserInput,
     resultCorrectAnswer,
+    jumbledLetters,
+    placedLetters,
     handleInputStart,
     submitAnswer,
     showHint,
+    addPlacedLetter,
+    removePlacedLetter,
+    submitJumbledAnswer,
+    showFinalAnswer,
     moveToNext,
     resetSession,
   }

@@ -1,10 +1,12 @@
 // components/learning-session.tsx
 "use client"
 
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { cn } from "@/lib/utils"
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut"
 import { useLearningSession } from "@/hooks/use-learning-session"
 import { SentenceInput } from "@/components/learning/sentence-input"
@@ -20,6 +22,89 @@ interface LearningSessionProps {
 export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningSessionProps) {
   const router = useRouter()
   const session = useLearningSession(deckId, totalQuestions)
+
+  const [isKeyboardActive, setIsKeyboardActive] = useState(false)
+
+  // 1. HTML/Body scroll & position lock (Prevent page bounce / scroll leaks)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const originalHtmlStyle = document.documentElement.getAttribute("style") || ""
+    const originalBodyStyle = document.body.getAttribute("style") || ""
+
+    const lockDocument = () => {
+      document.documentElement.style.position = "fixed"
+      document.documentElement.style.overflow = "hidden"
+      document.documentElement.style.width = "100%"
+      document.documentElement.style.height = "100%"
+      document.documentElement.style.overscrollBehavior = "none"
+
+      document.body.style.position = "fixed"
+      document.body.style.overflow = "hidden"
+      document.body.style.width = "100%"
+      document.body.style.height = "100%"
+      document.body.style.overscrollBehavior = "none"
+    }
+
+    lockDocument()
+
+    return () => {
+      if (originalHtmlStyle) {
+        document.documentElement.setAttribute("style", originalHtmlStyle)
+      } else {
+        document.documentElement.removeAttribute("style")
+      }
+      if (originalBodyStyle) {
+        document.body.setAttribute("style", originalBodyStyle)
+      } else {
+        document.body.removeAttribute("style")
+      }
+    }
+  }, [])
+
+  // 2. Visual Viewport API height mapping & dynamic keyboard state tracking
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return
+
+    const handleResize = () => {
+      const vv = window.visualViewport
+      if (!vv) return
+      
+      // Update CSS custom property directly for buttery smooth 60fps animations
+      document.documentElement.style.setProperty("--visual-viewport-height", `${vv.height}px`)
+
+      const isMobile = window.innerWidth < 768
+      const active = isMobile && vv.height < window.innerHeight - 140
+      
+      // Prevent unnecessary React renders by using functional state updater with prev comparison
+      setIsKeyboardActive((prev) => (prev !== active ? active : prev))
+
+      if (active) {
+        // Reset scroll position to 0 to prevent iOS layout offset
+        window.scrollTo(0, 0)
+        if (document.documentElement) document.documentElement.scrollTop = 0
+        if (document.body) document.body.scrollTop = 0
+
+        // Secondary safety reset to capture any delayed layout shifts
+        const resetScroll = () => {
+          window.scrollTo(0, 0)
+          if (document.documentElement) document.documentElement.scrollTop = 0
+          if (document.body) document.body.scrollTop = 0
+        }
+        setTimeout(resetScroll, 20)
+        setTimeout(resetScroll, 60)
+      }
+    }
+
+    handleResize()
+    window.visualViewport.addEventListener("resize", handleResize)
+    window.visualViewport.addEventListener("scroll", handleResize)
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize)
+      window.visualViewport?.removeEventListener("scroll", handleResize)
+      document.documentElement.style.removeProperty("--visual-viewport-height")
+    }
+  }, [])
 
   // Global Shortcuts
   useKeyboardShortcut("Escape", () => router.push("/"))
@@ -57,10 +142,16 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background selection:bg-primary/20">
+    <div 
+      className="flex flex-col bg-background selection:bg-primary/20 overflow-hidden"
+      style={{ height: "var(--visual-viewport-height, 100dvh)" }}
+    >
       <Progress value={session.progressPercentage} className="fixed top-0 left-0 z-50 h-1 w-full rounded-none" />
 
-      <header className="flex items-center justify-between px-4 py-3 md:px-8">
+      <header className={cn(
+        "flex items-center justify-between px-4 md:px-8 transition-all duration-300",
+        isKeyboardActive ? "py-1.5" : "py-3"
+      )}>
         <div className="flex flex-1 items-center gap-4">
           <span className="text-xs font-medium text-muted-foreground">
             {session.completedCount} / {session.totalQuestions}
@@ -74,10 +165,16 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-6">
-        <div className="flex w-full max-w-3xl flex-col items-center gap-12">
+      <main className={cn(
+        "flex flex-1 flex-col items-center justify-center px-4 sm:px-6 transition-all duration-300",
+        isKeyboardActive ? "py-2" : "py-6 sm:py-0"
+      )}>
+        <div className={cn(
+          "flex w-full max-w-3xl flex-col items-center transition-all duration-300",
+          isKeyboardActive ? "gap-2" : "gap-4 sm:gap-6 md:gap-12"
+        )}>
           {/* Korean Translation */}
-          <p className="text-center text-lg md:text-xl text-muted-foreground/80 font-light tracking-wide">
+          <p className="text-center text-base sm:text-lg md:text-xl text-muted-foreground/80 font-light tracking-wide">
             {session.currentWord && (
               session.currentWord.koreanHighlight ? (
                 session.currentWord.korean.split(session.currentWord.koreanHighlight).map((part, i, arr) => (
@@ -94,7 +191,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
 
           {/* Interactive Sentence */}
           {session.currentWord && (
-            <div className="text-center text-2xl md:text-3xl leading-relaxed">
+            <div className="text-center text-xl sm:text-2xl md:text-3xl leading-relaxed">
               <SentenceInput
                 currentWord={session.currentWord}
                 status={session.status}
@@ -110,30 +207,11 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
             </div>
           )}
 
-          {/* Test Buttons (Temporary) */}
-          <div className="flex gap-3 opacity-20 hover:opacity-100 transition-opacity">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 text-xs border-success/50 text-success hover:bg-success/10"
-              onClick={() => session.currentWord && session.submitAnswer(session.currentWord.answer)}
-              disabled={session.status === "validating" || session.status === "correct"}
-            >
-              Correct (Test)
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 text-xs border-destructive/50 text-destructive hover:bg-destructive/10"
-              onClick={() => session.submitAnswer("wrong_answer_test")}
-              disabled={session.status === "validating" || session.status === "correct"}
-            >
-              Incorrect (Test)
-            </Button>
-          </div>
-
           {/* Feedback Area */}
-          <div className="flex min-h-[6rem] w-full flex-col items-center justify-start gap-3 relative">
+          <div className={cn(
+            "flex w-full flex-col items-center justify-start gap-3 relative transition-all duration-300",
+            isKeyboardActive ? "min-h-[2.5rem]" : "min-h-[4.5rem] sm:min-h-[6rem]"
+          )}>
             {session.currentWord && (
               <SessionFeedback 
                 status={session.status} 

@@ -52,7 +52,7 @@ export function SentenceInput({
       if (status === "idle") {
         inputRef.current.value = ""
         updateInputWidth("")
-        inputRef.current.focus()
+        inputRef.current.focus({ preventScroll: true })
       } else if (status === "correct" && currentWord) {
         if (placedLetters.length > 0 || !inputRef.current.value) {
           // Fix for returning from Jumbled Mode to standard display
@@ -81,7 +81,7 @@ export function SentenceInput({
 
   useEffect(() => {
     if (isJumbledMode && status !== "show_answer") {
-      jumbledRef.current?.focus()
+      jumbledRef.current?.focus({ preventScroll: true })
     }
   }, [isJumbledMode, status, placedLetters]) // Ensure refocus after adding/removing letters
 
@@ -92,7 +92,7 @@ export function SentenceInput({
 
   const handleJumbledBlur = (e: React.FocusEvent) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node) && isJumbledMode && status !== "show_answer") {
-      setTimeout(() => jumbledRef.current?.focus(), 10)
+      setTimeout(() => jumbledRef.current?.focus({ preventScroll: true }), 10)
     }
   }
 
@@ -113,7 +113,7 @@ export function SentenceInput({
 
   const handleBlur = () => {
     if (status !== "complete" && !isJumbledMode) {
-      setTimeout(() => inputRef.current?.focus(), 10)
+      setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 10)
     }
   }
 
@@ -126,7 +126,7 @@ export function SentenceInput({
       <span className="relative inline-block align-baseline mx-1">
         <span 
           ref={spanRef} 
-          className="absolute left-0 top-0 -z-10 opacity-0 whitespace-pre text-2xl md:text-3xl font-bold pointer-events-none" 
+          className="absolute left-0 top-0 -z-10 opacity-0 whitespace-pre text-xl sm:text-2xl md:text-3xl font-bold pointer-events-none" 
           aria-hidden="true"
         >
           {currentWord.answer}
@@ -190,7 +190,7 @@ export function SentenceInput({
           onBlur={handleBlur}
           readOnly={status === "correct" || status === "typo" || status === "validating"}
           className={cn(
-            "inline-block bg-transparent text-center text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
+            "inline-block bg-transparent text-center text-xl sm:text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
             "border-b-2 placeholder:text-transparent w-16",
             status === "idle" && "border-muted-foreground/30 focus:border-primary text-primary",
             status === "correct" && "border-success text-success animate-spring-pop",

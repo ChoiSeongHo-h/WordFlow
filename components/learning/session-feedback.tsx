@@ -1,9 +1,13 @@
 // components/learning/session-feedback.tsx
+"use client"
+
+import { useState, useEffect } from "react"
 import { Check, Eye, ArrowRight, AlertCircle, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { WordItem } from "@/lib/api"
 import type { SessionStatus, JumbledLetter } from "@/hooks/use-learning-session"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface SessionFeedbackProps {
   status: SessionStatus
@@ -17,6 +21,7 @@ interface SessionFeedbackProps {
   onAddLetter?: (letter: JumbledLetter) => void
   onSubmitJumbled?: () => void
   onShowFinalAnswer?: () => void
+  onSubmit?: () => void
 }
 
 function TypoDiff({ user, correct }: { user: string; correct: string }) {
@@ -33,6 +38,24 @@ function TypoDiff({ user, correct }: { user: string; correct: string }) {
   )
 }
 
+/*
+ * 디바이스 및 상태(Status)별 키보드 활성화 여부 대응표:
+ * 
+ * | 디바이스 | 상태 (Status) | 키보드 상태 |
+ * | :--- | :--- | :--- |
+ * | **PC** | **일반 입력 (Idle/Validating)** | 키보드 활성화 |
+ * | **PC** | **정답 맞힘 (Correct)** | 키보드 활성화 |
+ * | **PC** | **오답 (Incorrect)** | 키보드 활성화 |
+ * | **PC** | **힌트 입력 (Jumbled)** | 키보드 활성화 |
+ * | **PC** | **힌트 틀림 (Jumbled/Incorrect)** | 키보드 활성화 |
+ * | **PC** | **최종 정답 확인 (Show Answer)** | 키보드 활성화 |
+ * | **모바일** | **일반 입력 (Idle/Validating)** | 키보드 활성화 |
+ * | **모바일** | **정답 맞힘 (Correct)** | 키보드 활성화 |
+ * | **모바일** | **오답 (Incorrect)** | 키보드 활성화 |
+ * | **모바일** | **힌트 입력 (Jumbled)** | 키보드 비활성화 (가상 키보드 닫힘) |
+ * | **모바일** | **힌트 틀림 (Jumbled/Incorrect)** | 키보드 비활성화 (가상 키보드 닫힘) |
+ * | **모바일** | **최종 정답 확인 (Show Answer)** | 키보드 비활성화 (가상 키보드 닫힘) |
+ */
 export function SessionFeedback({ 
   status, 
   currentWord, 
@@ -44,23 +67,26 @@ export function SessionFeedback({
   placedLetters = [],
   onAddLetter,
   onSubmitJumbled,
-  onShowFinalAnswer
+  onShowFinalAnswer,
+  onSubmit
 }: SessionFeedbackProps) {
+  const [isMounted, setIsMounted] = useState(false)
+  const isMobile = useIsMobile()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  const isMobileDevice = isMounted && isMobile
+
   if (status === "correct") {
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-2 text-success">
-          <Check className="size-5" />
-          <span className="font-medium">Correct!</span>
-        </div>
         <div className="flex flex-col items-center gap-2 mt-2">
           <Button size="sm" onClick={onNext} className="gap-1.5" variant="outline">
-            Next Word
+            Next Word (Enter)
             <ArrowRight className="size-3.5" />
           </Button>
-          <p className="text-[10px] text-muted-foreground/50">
-            Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> to skip
-          </p>
         </div>
       </div>
     )
@@ -90,11 +116,8 @@ export function SessionFeedback({
       <div className="flex flex-col items-center gap-2 animate-in fade-in duration-200">
         <Button variant="outline" size="sm" onClick={onShowHint}>
           <Eye className="size-4 mr-2" />
-          Show Hint
+          Show Hint (Enter)
         </Button>
-        <p className="text-[10px] text-muted-foreground/50">
-          Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> for hint
-        </p>
       </div>
     )
   }
@@ -128,7 +151,7 @@ export function SessionFeedback({
           {status === "jumbled_incorrect" ? (
             <Button variant="destructive" size="sm" onClick={onShowFinalAnswer} className="gap-2">
               <Eye className="size-4" />
-              Show Answer
+              {isMobileDevice ? "Show Answer" : "Show Answer (Enter)"}
             </Button>
           ) : (
             <Button 
@@ -138,7 +161,7 @@ export function SessionFeedback({
               disabled={placedLetters.length !== jumbledLetters.length}
             >
               <Send className="size-4" />
-              Submit
+              {isMobileDevice ? "Submit" : "Submit (Enter)"}
             </Button>
           )}
           <p className="text-[10px] text-muted-foreground/50">
@@ -158,20 +181,25 @@ export function SessionFeedback({
         </p>
         <div className="flex flex-col items-center gap-2">
           <Button size="sm" onClick={onNext} className="gap-1.5">
-            Next Word
+            {isMobileDevice ? "Next Word" : "Next Word (Enter)"}
             <ArrowRight className="size-3.5" />
           </Button>
-          <p className="text-[10px] text-muted-foreground/50">
-            Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1 py-0.5 rounded">Enter</kbd> to skip
-          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <p className="text-xs text-muted-foreground opacity-70">
-      Type the word and press Enter
-    </p>
+    <div className="flex flex-col items-center gap-2">
+      <Button 
+        size="sm" 
+        onClick={onSubmit} 
+        disabled={status === "validating"}
+        className="gap-2"
+      >
+        <Send className="size-4" />
+        Submit (Enter)
+      </Button>
+    </div>
   )
 }

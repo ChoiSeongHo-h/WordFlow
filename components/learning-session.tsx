@@ -225,6 +225,12 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onAddLetter={session.addPlacedLetter}
                 onSubmitJumbled={session.submitJumbledAnswer}
                 onShowFinalAnswer={session.showFinalAnswer}
+                onSubmit={() => {
+                  const inputEl = document.querySelector('input')
+                  if (inputEl && inputEl.value.trim()) {
+                    session.submitAnswer(inputEl.value.trim())
+                  }
+                }}
               />
             )}
           </div>

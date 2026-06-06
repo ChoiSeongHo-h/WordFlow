@@ -201,6 +201,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onSkip={session.moveToNext}
                 placedLetters={session.placedLetters}
                 onRemoveLetter={session.removePlacedLetter}
+                onReorderLetter={session.reorderPlacedLetter}
                 jumbledLetters={session.jumbledLetters}
                 onAddLetter={session.addPlacedLetter}
               />

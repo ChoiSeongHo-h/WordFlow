@@ -18,6 +18,25 @@ interface SentenceInputProps {
   onReorderLetter?: (fromIndex: number, toIndex: number) => void
   jumbledLetters?: JumbledLetter[]
   onAddLetter?: (letter: JumbledLetter) => void
+  activeDrag: {
+    letter: JumbledLetter
+    source: "pool" | "placed"
+    startIndex: number | null
+    width: number
+    grabOffset: { x: number; y: number }
+  } | null
+  hoverIndex: number | null
+  isOverPool: boolean
+  onDragStart: (
+    e: React.PointerEvent<HTMLButtonElement>,
+    letter: JumbledLetter,
+    source: "pool" | "placed",
+    index: number | null
+  ) => void
+  hasDraggedRef: React.RefObject<boolean>
+  placedContainerRef: React.RefObject<HTMLDivElement | null>
+  activeKeyLetterIds: string[]
+  setActiveKeyLetterIds: React.Dispatch<React.SetStateAction<string[]>>
 }
 
 export function SentenceInput({
@@ -31,120 +50,29 @@ export function SentenceInput({
   onRemoveLetter,
   onReorderLetter,
   jumbledLetters = [],
-  onAddLetter
+  onAddLetter,
+  activeDrag,
+  hoverIndex,
+  isOverPool,
+  onDragStart,
+  hasDraggedRef,
+  placedContainerRef,
+  activeKeyLetterIds,
+  setActiveKeyLetterIds
 }: SentenceInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const spanRef = useRef<HTMLSpanElement>(null)
   const jumbledRef = useRef<HTMLDivElement>(null)
-  const jumbledInnerRef = useRef<HTMLDivElement>(null)
+  const pendingLetterRef = useRef<JumbledLetter | null>(null)
+  const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
+
+  useEffect(() => {
+    return () => {
+      pendingTimeoutsRef.current.forEach(clearTimeout)
+    }
+  }, [])
 
   const isJumbledMode = status === "jumbled" || status === "jumbled_incorrect" || status === "show_answer"
-
-  // Pointer Events drag-and-drop state
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
-  const [draggedLetterPos, setDraggedLetterPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-  const [draggedLetterWidth, setDraggedLetterWidth] = useState<number>(0)
-
-  const dragPointerIdRef = useRef<number | null>(null)
-  const pendingDragIndexRef = useRef<number | null>(null)
-  const dragStartCoordsRef = useRef<{ x: number; y: number } | null>(null)
-  const dragGrabOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  const hasDraggedRef = useRef<boolean>(false)
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>, index: number) => {
-    if (e.button !== 0) return // Only primary click
-    e.currentTarget.setPointerCapture(e.pointerId)
-    
-    const rect = e.currentTarget.getBoundingClientRect()
-    dragPointerIdRef.current = e.pointerId
-    pendingDragIndexRef.current = index
-    dragStartCoordsRef.current = { x: e.clientX, y: e.clientY }
-    dragGrabOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
-    hasDraggedRef.current = false
-    
-    setDraggedLetterWidth(rect.width)
-    setDraggedLetterPos({ x: rect.left, y: rect.top })
-  }
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>, index: number) => {
-    if (pendingDragIndexRef.current === null || dragPointerIdRef.current !== e.pointerId) return
-    
-    const dx = e.clientX - dragStartCoordsRef.current!.x
-    const dy = e.clientY - dragStartCoordsRef.current!.y
-    
-    // Start drag flow only when user moves past the 5px threshold
-    if (!hasDraggedRef.current) {
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        hasDraggedRef.current = true
-        setDraggedIndex(pendingDragIndexRef.current)
-        setHoverIndex(pendingDragIndexRef.current)
-      }
-    }
-
-    if (hasDraggedRef.current && pendingDragIndexRef.current !== null) {
-      // Update floating position to follow pointer
-      setDraggedLetterPos({
-        x: e.clientX - dragGrabOffsetRef.current.x,
-        y: e.clientY - dragGrabOffsetRef.current.y
-      })
-
-      const container = jumbledInnerRef.current
-      if (!container) return
-
-      const children = Array.from(container.children) as HTMLElement[]
-      // Filter out placeholder and floating items to get actual letter button rects
-      const normalButtons = children.filter(
-        child => child.tagName === "BUTTON" && !child.dataset.placeholder && !child.dataset.dragging
-      )
-      const rects = normalButtons.map(child => child.getBoundingClientRect())
-
-      let newHoverIndex = 0
-      for (let i = 0; i < rects.length; i++) {
-        const rect = rects[i]
-        const midpoint = rect.left + rect.width / 2
-        if (e.clientX > midpoint) {
-          newHoverIndex = i + 1
-        }
-      }
-
-      if (hoverIndex !== newHoverIndex) {
-        setHoverIndex(newHoverIndex)
-      }
-    }
-  }
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>, index: number) => {
-    if (dragPointerIdRef.current === e.pointerId) {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId)
-      }
-      
-      if (hasDraggedRef.current && hoverIndex !== null && draggedIndex !== null && draggedIndex !== hoverIndex) {
-        onReorderLetter?.(draggedIndex, hoverIndex)
-      }
-      
-      // Delay resetting hasDraggedRef slightly to let the synchronous click event read it first,
-      // preventing accessibility bugs for keyboard actions.
-      setTimeout(() => {
-        hasDraggedRef.current = false
-      }, 50)
-      
-      dragPointerIdRef.current = null
-      pendingDragIndexRef.current = null
-      dragStartCoordsRef.current = null
-      setDraggedIndex(null)
-      setHoverIndex(null)
-    }
-  }
-
-  const handlePointerCancel = () => {
-    dragPointerIdRef.current = null
-    pendingDragIndexRef.current = null
-    dragStartCoordsRef.current = null
-    setDraggedIndex(null)
-    setHoverIndex(null)
-  }
 
   // Dynamic sizing based on word length to prevent overflow on mobile (only on screens < 768px)
   const wordLength = currentWord?.answer?.length || 0
@@ -160,15 +88,23 @@ export function SentenceInput({
 
   // Calculate visual order of elements via Flexbox 'order' property to prevent DOM node reordering during drag
   const getLetterOrder = (index: number) => {
-    if (draggedIndex === null || hoverIndex === null) return index
-    if (index === draggedIndex) return hoverIndex
-    
-    if (draggedIndex < hoverIndex) {
-      if (index > draggedIndex && index <= hoverIndex) {
-        return index - 1
+    if (!activeDrag || hoverIndex === null) return index
+
+    if (activeDrag.source === "placed" && activeDrag.startIndex !== null) {
+      const draggedIdx = activeDrag.startIndex
+      if (index === draggedIdx) return hoverIndex
+      
+      if (draggedIdx < hoverIndex) {
+        if (index > draggedIdx && index <= hoverIndex) {
+          return index - 1
+        }
+      } else if (draggedIdx > hoverIndex) {
+        if (index >= hoverIndex && index < draggedIdx) {
+          return index + 1
+        }
       }
-    } else if (draggedIndex > hoverIndex) {
-      if (index >= hoverIndex && index < draggedIndex) {
+    } else if (activeDrag.source === "pool") {
+      if (index >= hoverIndex) {
         return index + 1
       }
     }
@@ -208,8 +144,8 @@ export function SentenceInput({
           const width = Math.max(64, spanRef.current.offsetWidth + 16)
           jumbledRef.current.style.width = `${width}px`
         }
-      } else if (jumbledInnerRef.current) {
-        const innerWidth = jumbledInnerRef.current.offsetWidth
+      } else if (placedContainerRef.current) {
+        const innerWidth = placedContainerRef.current.offsetWidth
         const targetWidth = Math.max(64, innerWidth)
         jumbledRef.current.style.width = `${targetWidth}px`
       }
@@ -286,7 +222,18 @@ export function SentenceInput({
                 const available = jumbledLetters?.find(
                   jl => jl.char.toLowerCase() === char && !placedLetters.some(pl => pl.id === jl.id)
                 )
-                if (available) onAddLetter?.(available)
+                if (available) {
+                  // Place the letter immediately (zero latency, zero dropped keys)
+                  onAddLetter?.(available)
+                  
+                  // Highlight in the pool for 150ms
+                  setActiveKeyLetterIds(prev => [...prev, available.id])
+                  const t = setTimeout(() => {
+                    setActiveKeyLetterIds(prev => prev.filter(id => id !== available.id))
+                    pendingTimeoutsRef.current = pendingTimeoutsRef.current.filter(x => x !== t)
+                  }, 150)
+                  pendingTimeoutsRef.current.push(t)
+                }
               }
             }}
             className={cn(
@@ -300,9 +247,9 @@ export function SentenceInput({
             {status === "show_answer" ? (
               <span className="text-foreground font-semibold">{currentWord.answer}</span>
             ) : (
-              <div ref={jumbledInnerRef} className={cn("flex min-h-[2.25rem] items-center w-max", containerGapClass)}>
+              <div ref={placedContainerRef} className={cn("flex min-h-[2.25rem] items-center w-max", containerGapClass)}>
                 {placedLetters.map((letter, index) => {
-                  const isDragging = draggedIndex === index
+                  const isDragging = activeDrag && activeDrag.source === "placed" && activeDrag.startIndex === index
                   const visualOrder = getLetterOrder(index)
                   
                   if (isDragging) {
@@ -310,16 +257,13 @@ export function SentenceInput({
                       <button
                         key={letter.id}
                         data-placeholder="true"
-                        onPointerMove={(e) => handlePointerMove(e, index)}
-                        onPointerUp={(e) => handlePointerUp(e, index)}
-                        onPointerCancel={handlePointerCancel}
-                        onLostPointerCapture={handlePointerCancel}
                         className={cn(
-                          "border-2 border-dashed border-primary/40 bg-primary/5 rounded-md text-transparent select-none touch-none cursor-grabbing animate-pulse",
-                          sizeClasses
+                          "border-2 border-dashed border-primary/40 bg-primary/5 rounded-md text-transparent select-none touch-none cursor-grabbing animate-pulse transition-all duration-200",
+                          sizeClasses,
+                          isOverPool && "w-0 opacity-0 px-0 border-0 overflow-hidden mx-0"
                         )}
                         style={{ 
-                          width: `${draggedLetterWidth}px`,
+                          width: isOverPool ? "0px" : `${activeDrag.width}px`,
                           order: visualOrder,
                           viewTransitionName: `letter-${letter.id}`
                         } as React.CSSProperties}
@@ -332,11 +276,7 @@ export function SentenceInput({
                   return (
                     <button
                       key={letter.id}
-                      onPointerDown={(e) => handlePointerDown(e, index)}
-                      onPointerMove={(e) => handlePointerMove(e, index)}
-                      onPointerUp={(e) => handlePointerUp(e, index)}
-                      onPointerCancel={handlePointerCancel}
-                      onLostPointerCapture={handlePointerCancel}
+                      onPointerDown={(e) => onDragStart(e, letter, "placed", index)}
                       onClick={(e) => {
                         if (hasDraggedRef.current) {
                           e.preventDefault()
@@ -345,7 +285,7 @@ export function SentenceInput({
                         onRemoveLetter?.(letter)
                       }}
                       className={cn(
-                        "rounded-md bg-secondary text-secondary-foreground font-bold transition-all hover:bg-secondary/80 select-none touch-none cursor-grab",
+                        "rounded-md bg-secondary text-secondary-foreground font-bold transition-all hover:bg-secondary/80 active:bg-primary active:text-primary-foreground active:scale-95 duration-100 select-none touch-none cursor-grab",
                         sizeClasses,
                         letter.char === " " && "bg-muted/50"
                       )}
@@ -358,24 +298,26 @@ export function SentenceInput({
                     </button>
                   )
                 })}
-                {placedLetters.length === 0 && <span className="text-muted-foreground/20">...</span>}
+                {placedLetters.length === 0 && !(activeDrag && activeDrag.source === "pool" && hoverIndex !== null) && (
+                  <span className="text-muted-foreground/20">...</span>
+                )}
 
-                {/* Floating Dragged Letter Indicator */}
-                {draggedIndex !== null && (
-                  <div
-                    data-dragging="true"
+                {/* Insertion Placeholder from Pool Drag */}
+                {activeDrag && activeDrag.source === "pool" && hoverIndex !== null && (
+                  <button
+                    data-placeholder="true"
                     className={cn(
-                      "fixed rounded-md bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-lg ring-2 ring-primary/50 cursor-grabbing select-none pointer-events-none z-50",
+                      "border-2 border-dashed border-primary/40 bg-primary/5 rounded-md text-transparent select-none touch-none cursor-grabbing animate-pulse",
                       sizeClasses
                     )}
-                    style={{
-                      left: `${draggedLetterPos.x}px`,
-                      top: `${draggedLetterPos.y}px`,
-                      width: `${draggedLetterWidth}px`
-                    }}
+                    style={{ 
+                      width: `${activeDrag.width}px`,
+                      order: hoverIndex,
+                      viewTransitionName: `letter-placeholder`
+                    } as React.CSSProperties}
                   >
-                    {placedLetters[draggedIndex].char === " " ? "\u00A0" : placedLetters[draggedIndex].char}
-                  </div>
+                    &nbsp;
+                  </button>
                 )}
               </div>
             )}

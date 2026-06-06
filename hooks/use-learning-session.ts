@@ -23,7 +23,7 @@ interface UseLearningSessionReturn {
   handleInputStart: () => void
   submitAnswer: (answer: string) => Promise<void>
   showHint: () => void // This will now trigger jumbled mode
-  addPlacedLetter: (letter: JumbledLetter) => void
+  addPlacedLetter: (letter: JumbledLetter, index?: number) => void
   removePlacedLetter: (letter: JumbledLetter) => void
   reorderPlacedLetter: (fromIndex: number, toIndex: number) => void
   submitJumbledAnswer: () => void
@@ -219,11 +219,20 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     }
   }, [status, currentWord])
 
-  const addPlacedLetter = useCallback((letter: JumbledLetter) => {
+  const addPlacedLetter = useCallback((letter: JumbledLetter, index?: number) => {
     if (status !== "jumbled" && status !== "jumbled_incorrect") return
     
     const update = () => {
-      setPlacedLetters(prev => [...prev, letter])
+      setPlacedLetters(prev => {
+        if (prev.some(pl => pl.id === letter.id)) return prev
+        const result = [...prev]
+        if (typeof index === "number") {
+          result.splice(index, 0, letter)
+        } else {
+          result.push(letter)
+        }
+        return result
+      })
       if (status === "jumbled_incorrect") setStatus("jumbled")
     }
 

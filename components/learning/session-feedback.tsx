@@ -22,6 +22,22 @@ interface SessionFeedbackProps {
   onSubmitJumbled?: () => void
   onShowFinalAnswer?: () => void
   onSubmit?: () => void
+  activeDrag: {
+    letter: JumbledLetter
+    source: "pool" | "placed"
+    startIndex: number | null
+    width: number
+    grabOffset: { x: number; y: number }
+  } | null
+  onDragStart: (
+    e: React.PointerEvent<HTMLButtonElement>,
+    letter: JumbledLetter,
+    source: "pool" | "placed",
+    index: number | null
+  ) => void
+  hasDraggedRef: React.RefObject<boolean>
+  poolContainerRef: React.RefObject<HTMLDivElement | null>
+  activeKeyLetterIds: string[]
 }
 
 function TypoDiff({ user, correct }: { user: string; correct: string }) {
@@ -68,7 +84,12 @@ export function SessionFeedback({
   onAddLetter,
   onSubmitJumbled,
   onShowFinalAnswer,
-  onSubmit
+  onSubmit,
+  activeDrag,
+  onDragStart,
+  hasDraggedRef,
+  poolContainerRef,
+  activeKeyLetterIds
 }: SessionFeedbackProps) {
   const [isMounted, setIsMounted] = useState(false)
   const isMobile = useIsMobile()
@@ -124,22 +145,37 @@ export function SessionFeedback({
 
   if (status === "jumbled" || status === "jumbled_incorrect") {
     return (
-      <div className="flex flex-col items-center gap-4 animate-in slide-in-from-bottom-2 duration-300 w-full max-w-md">
+      <div 
+        ref={poolContainerRef}
+        className="flex flex-col items-center gap-4 animate-in slide-in-from-bottom-2 duration-300 w-full max-w-md"
+      >
         <div className="flex flex-wrap justify-center gap-2">
           {jumbledLetters.map((letter) => {
             const isPlaced = placedLetters.some(pl => pl.id === letter.id)
+            const isDraggingThis = activeDrag && activeDrag.source === "pool" && activeDrag.letter.id === letter.id
+            const isKeyboardActive = activeKeyLetterIds.includes(letter.id)
+            const hide = (isPlaced && !isKeyboardActive) || isDraggingThis
+
             return (
               <Button
                 key={letter.id}
                 variant="secondary"
                 size="sm"
                 className={cn(
-                  "h-9 min-w-[2.25rem] font-bold text-lg transition-all",
+                  "h-9 min-w-[2.25rem] font-bold text-lg transition-all touch-none select-none cursor-grab active:bg-primary active:text-primary-foreground active:scale-95 duration-100",
                   letter.char === " " && "bg-muted/50",
-                  isPlaced && "opacity-0 pointer-events-none"
+                  isKeyboardActive && "bg-primary text-primary-foreground scale-95",
+                  hide && "opacity-0 pointer-events-none"
                 )}
-                style={{ viewTransitionName: isPlaced ? "none" : `letter-${letter.id}` } as React.CSSProperties}
-                onClick={() => onAddLetter?.(letter)}
+                style={{ viewTransitionName: hide ? "none" : `letter-${letter.id}` } as React.CSSProperties}
+                onPointerDown={(e) => onDragStart(e, letter, "pool", null)}
+                onClick={(e) => {
+                  if (hasDraggedRef.current) {
+                    e.preventDefault()
+                    return
+                  }
+                  onAddLetter?.(letter)
+                }}
               >
                 {letter.char === " " ? "\u00A0" : letter.char}
               </Button>

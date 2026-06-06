@@ -2,13 +2,21 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Zap, Lock, CreditCard, LogOut, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, Zap, Lock, CreditCard, LogOut, CheckCircle2, Volume2, Play } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
+import { Slider } from "@/components/ui/slider"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import { removeAuthToken } from "@/lib/api"
 
@@ -17,6 +25,52 @@ export default function SettingsPage() {
   const { toast } = useToast()
   const [isChangingPassword, setIsChangingPassword] = React.useState(false)
   const [isUpdatingSubscription, setIsUpdatingSubscription] = React.useState(false)
+
+  const [userEmail, setUserEmail] = React.useState("guest")
+  const [voiceSpeed, setVoiceSpeed] = React.useState(1.0)
+  const [voiceURI, setVoiceURI] = React.useState("system-default")
+  const [voices, setVoices] = React.useState<SpeechSynthesisVoice[]>([])
+
+  React.useEffect(() => {
+    // Decode user email from token
+    const token = localStorage.getItem("flow_token")
+    let email = "guest"
+    if (token) {
+      try {
+        const base64Url = token.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))
+        const payload = JSON.parse(jsonPayload)
+        email = payload.sub || "guest"
+      } catch (e) {
+        console.error("Failed to decode token", e)
+      }
+    }
+    setUserEmail(email)
+
+    // Load saved settings
+    const speed = localStorage.getItem(`wordflow-voice-speed-${email}`)
+    const uri = localStorage.getItem(`wordflow-voice-uri-${email}`)
+    if (speed) setVoiceSpeed(parseFloat(speed))
+    if (uri) setVoiceURI(uri)
+
+    // Populate voices
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const updateVoices = () => {
+        const allVoices = window.speechSynthesis.getVoices()
+        const englishVoices = allVoices.filter(v => v.lang.startsWith("en"))
+        setVoices(englishVoices)
+      }
+      updateVoices()
+      window.speechSynthesis.onvoiceschanged = updateVoices
+    }
+
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null
+      }
+    }
+  }, [])
 
   const handleBack = () => {
     router.push("/")
@@ -145,6 +199,95 @@ export default function SettingsPage() {
                   {isChangingPassword ? "Updating..." : "Update Password"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          {/* Voice Settings Card */}
+          <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="border-b border-border/20 bg-muted/20 pb-4">
+              <div className="flex items-center gap-2">
+                <Volume2 className="size-4 text-primary" />
+                <CardTitle className="text-lg">Voice Settings</CardTitle>
+              </div>
+              <CardDescription>Customize the TTS (Text-to-Speech) feedback voice and speed.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="voice-speed">Voice Speed ({voiceSpeed.toFixed(1)}x)</Label>
+                  <span className="text-xs text-muted-foreground">0.5x (Slow) - 2.0x (Fast)</span>
+                </div>
+                <div className="pt-2">
+                  <Slider
+                    id="voice-speed"
+                    value={[voiceSpeed]}
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    onValueChange={(val) => {
+                      const speed = val[0]
+                      setVoiceSpeed(speed)
+                      localStorage.setItem(`wordflow-voice-speed-${userEmail}`, speed.toString())
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <Label htmlFor="voice-style">Voice Style (Accents & Personalities)</Label>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={voiceURI}
+                      onValueChange={(uri) => {
+                        setVoiceURI(uri)
+                        localStorage.setItem(`wordflow-voice-uri-${userEmail}`, uri)
+                        const voiceName = voices.find(v => v.voiceURI === uri)?.name || ""
+                        localStorage.setItem(`wordflow-voice-name-${userEmail}`, voiceName)
+                      }}
+                    >
+                      <SelectTrigger className="w-full bg-background/50">
+                        <SelectValue placeholder="System Default Voice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="system-default">System Default Voice</SelectItem>
+                        {voices.map((voice) => (
+                          <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                            {voice.name} ({voice.lang})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                        window.speechSynthesis.cancel()
+                        const utterance = new SpeechSynthesisUtterance("Welcome to WordFlow. This is a preview of your voice settings.")
+                        utterance.lang = "en-US"
+                        utterance.rate = voiceSpeed
+                        if (voiceURI && voiceURI !== "system-default") {
+                          const selectedVoice = voices.find(v => v.voiceURI === voiceURI)
+                          if (selectedVoice) {
+                            utterance.voice = selectedVoice
+                          }
+                        }
+                        window.speechSynthesis.speak(utterance)
+                      } else {
+                        toast({
+                          title: "Not supported",
+                          description: "Your browser does not support Speech Synthesis.",
+                        })
+                      }
+                    }}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <Play className="size-3.5 fill-current" />
+                    Test
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

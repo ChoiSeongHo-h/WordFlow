@@ -103,6 +103,75 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     }
   }, [completedCount, totalQuestions])
 
+  const playSpeechAndMoveToNext = useCallback((answerText: string) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+
+      if (!currentWord) {
+        moveToNext()
+        return
+      }
+
+      let userEmail = "guest"
+      try {
+        const token = localStorage.getItem("flow_token")
+        if (token) {
+          const base64Url = token.split('.')[1]
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))
+          const payload = JSON.parse(jsonPayload)
+          userEmail = payload.sub || "guest"
+        }
+      } catch (e) {
+        console.error("Failed to decode token", e)
+      }
+
+      const speedKey = `wordflow-voice-speed-${userEmail}`
+      const voiceKey = `wordflow-voice-uri-${userEmail}`
+      const savedSpeed = localStorage.getItem(speedKey)
+      const savedVoiceURI = localStorage.getItem(voiceKey)
+
+      const rate = savedSpeed ? parseFloat(savedSpeed) : 1.0
+      const fullSentence = currentWord.english.replace(/_+/g, answerText)
+      const utterance = new SpeechSynthesisUtterance(fullSentence)
+      utterance.lang = "en-US"
+      utterance.rate = rate
+
+      if (savedVoiceURI && savedVoiceURI !== "system-default") {
+        const voices = window.speechSynthesis.getVoices()
+        const selectedVoice = voices.find(v => v.voiceURI === savedVoiceURI)
+        if (selectedVoice) {
+          utterance.voice = selectedVoice
+        }
+      }
+
+      let finished = false
+      const handleFinish = () => {
+        if (!finished) {
+          finished = true
+          moveToNext()
+        }
+      }
+
+      const speechTimeout = setTimeout(() => {
+        handleFinish()
+      }, 8000)
+
+      utterance.onend = () => {
+        clearTimeout(speechTimeout)
+        handleFinish()
+      }
+      utterance.onerror = () => {
+        clearTimeout(speechTimeout)
+        handleFinish()
+      }
+
+      window.speechSynthesis.speak(utterance)
+    } else {
+      setTimeout(() => moveToNext(), 1500)
+    }
+  }, [currentWord, moveToNext])
+
   const submitAnswer = useCallback(async (answer: string) => {
     if (!answer || status === "validating" || status === "correct" || status === "typo" || !currentWord) return
 
@@ -123,21 +192,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
           setStatus("correct")
         }
         
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          window.speechSynthesis.cancel()
-          
-          const finalAnswer = result.isCorrect ? (result.correctAnswer || currentWord.answer) : currentWord.answer
-          const fullSentence = currentWord.english.replace(/_+/g, finalAnswer)
-          const utterance = new SpeechSynthesisUtterance(fullSentence)
-          utterance.lang = "en-US"
-          
-          utterance.onend = () => moveToNext()
-          utterance.onerror = () => moveToNext()
-          
-          window.speechSynthesis.speak(utterance)
-        } else {
-          setTimeout(() => moveToNext(), 1500)
-        }
+        const finalAnswer = result.correctAnswer || currentWord.answer
+        playSpeechAndMoveToNext(finalAnswer)
       } else {
         setStatus("incorrect")
       }
@@ -145,7 +201,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       console.error("Verification failed", error)
       setStatus("idle") 
     }
-  }, [currentWord, status, moveToNext])
+  }, [currentWord, status, playSpeechAndMoveToNext])
 
   const showHint = useCallback(() => {
     if (status === "incorrect" && currentWord) {
@@ -225,17 +281,18 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         }
       }
       setStatus("correct")
-      setTimeout(() => moveToNext(), 1500)
+      playSpeechAndMoveToNext(currentWord.answer)
     } else {
       setStatus("jumbled_incorrect")
     }
-  }, [status, currentWord, placedLetters, moveToNext])
+  }, [status, currentWord, placedLetters, playSpeechAndMoveToNext])
 
   const showFinalAnswer = useCallback(() => {
-    if (status === "jumbled_incorrect") {
+    if (status === "jumbled_incorrect" && currentWord) {
       setStatus("show_answer")
+      playSpeechAndMoveToNext(currentWord.answer)
     }
-  }, [status])
+  }, [status, currentWord, playSpeechAndMoveToNext])
 
   const resetSession = useCallback(() => {
     setCurrentIndex(0)

@@ -53,13 +53,15 @@ export function SentenceInput({
         inputRef.current.value = ""
         updateInputWidth("")
         inputRef.current.focus()
-      } else if (status === "correct" && !inputRef.current.value && currentWord) {
-        // Fix for returning from Jumbled Mode to standard display
-        inputRef.current.value = currentWord.answer
-        updateInputWidth(currentWord.answer)
+      } else if (status === "correct" && currentWord) {
+        if (placedLetters.length > 0 || !inputRef.current.value) {
+          // Fix for returning from Jumbled Mode to standard display
+          inputRef.current.value = currentWord.answer
+          updateInputWidth(currentWord.answer)
+        }
       }
     }
-  }, [currentWord, status, updateInputWidth])
+  }, [currentWord, status, updateInputWidth, placedLetters])
 
   useEffect(() => {
     if (isJumbledMode && jumbledRef.current) {
@@ -99,7 +101,7 @@ export function SentenceInput({
       e.preventDefault()
       if (status === "validating") return
 
-      if (status === "correct" || isJumbledMode) {
+      if (status === "correct" || status === "typo" || isJumbledMode) {
         onSkip()
       } else if (status === "incorrect") {
         onHintRequest()
@@ -110,7 +112,7 @@ export function SentenceInput({
   }
 
   const handleBlur = () => {
-    if (status !== "complete" && status !== "validating" && !isJumbledMode && status !== "correct") {
+    if (status !== "complete" && !isJumbledMode) {
       setTimeout(() => inputRef.current?.focus(), 10)
     }
   }
@@ -130,7 +132,7 @@ export function SentenceInput({
           {currentWord.answer}
         </span>
         
-        {isJumbledMode ? (
+        {isJumbledMode && (
           <div 
             ref={jumbledRef}
             tabIndex={0}
@@ -179,29 +181,29 @@ export function SentenceInput({
               </div>
             )}
           </div>
-        ) : (
-          <input
-            ref={inputRef}
-            type="text"
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            disabled={status === "correct" || status === "typo" || status === "validating"}
-            className={cn(
-              "inline-block bg-transparent text-center text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
-              "border-b-2 placeholder:text-transparent w-16",
-              status === "idle" && "border-muted-foreground/30 focus:border-primary text-primary",
-              status === "correct" && "border-success text-success animate-spring-pop",
-              status === "typo" && "border-warning text-warning animate-spring-pop",
-              status === "incorrect" && "border-destructive text-destructive animate-shake",
-              status === "validating" && "opacity-50"
-            )}
-            style={{ willChange: "width, transform" }}
-            autoComplete="off"
-            spellCheck="false"
-            autoFocus
-          />
         )}
+        <input
+          ref={inputRef}
+          type="text"
+          onChange={handleInput}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          readOnly={status === "correct" || status === "typo" || status === "validating"}
+          className={cn(
+            "inline-block bg-transparent text-center text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
+            "border-b-2 placeholder:text-transparent w-16",
+            status === "idle" && "border-muted-foreground/30 focus:border-primary text-primary",
+            status === "correct" && "border-success text-success animate-spring-pop",
+            status === "typo" && "border-warning text-warning animate-spring-pop",
+            status === "incorrect" && "border-destructive text-destructive animate-shake",
+            status === "validating" && "opacity-50",
+            isJumbledMode && "absolute opacity-0 pointer-events-none w-0 h-0 p-0 border-0"
+          )}
+          style={{ willChange: "width, transform" }}
+          autoComplete="off"
+          spellCheck="false"
+          autoFocus
+        />
       </span>
       <span className="text-foreground/90">{parts[1]}</span>
     </span>

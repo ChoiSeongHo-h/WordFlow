@@ -74,6 +74,13 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       window.speechSynthesis.cancel()
     }
 
+    if (typeof document !== "undefined") {
+      const inputEl = document.querySelector('input')
+      if (inputEl) {
+        inputEl.focus()
+      }
+    }
+
     if (completedCount < totalQuestions) {
       isMovingRef.current = true
       setCurrentIndex((prev) => prev + 1)
@@ -198,6 +205,12 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     
     const submittedAnswer = placedLetters.map(l => l.char).join("")
     if (submittedAnswer === currentWord.answer) {
+      if (typeof document !== "undefined") {
+        const inputEl = document.querySelector('input')
+        if (inputEl) {
+          inputEl.focus()
+        }
+      }
       setStatus("correct")
       setTimeout(() => moveToNext(), 1500)
     } else {

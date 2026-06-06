@@ -1,6 +1,6 @@
 // hooks/use-learning-session.ts
 import { useState, useCallback, useEffect, useRef } from "react"
-import { verifyAnswer, fetchNextWord, getUserProgress, type WordItem } from "@/lib/api"
+import { verifyAnswer, fetchNextWord, getUserProgress, startSession, type WordItem } from "@/lib/api"
 
 export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "typo" | "jumbled" | "jumbled_incorrect" | "show_answer" | "complete"
 
@@ -303,25 +303,41 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     }
   }, [status, currentWord, playSpeechAndMoveToNext])
 
-  const resetSession = useCallback(() => {
+  const resetSession = useCallback(async () => {
+    const nextGoal = Math.max(completedCount, totalQuestions) + 10
+    
+    // Update local state and localStorage synchronously for instant UI feedback
+    setTotalQuestions(nextGoal)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("wordflow-daily-goal", nextGoal.toString())
+    }
+
     setCurrentIndex(0)
     setStatus("idle")
     setCurrentWord(null)
     setJumbledLetters([])
     setPlacedLetters([])
     
-    Promise.all([fetchNextWord(), getUserProgress()])
-      .then(([word, progress]) => {
-        if (word) setCurrentWord(word)
-        else setStatus("complete")
-        
-        if (progress) {
-          setCompletedCount(progress.dailyCompleted)
-          setTotalQuestions(progress.dailyGoal)
-        }
-      })
-      .catch(() => setStatus("complete"))
-  }, [deckId])
+    try {
+      await startSession(deckId, nextGoal)
+      
+      const [word, progress] = await Promise.all([fetchNextWord(), getUserProgress()])
+      
+      if (word) {
+        setCurrentWord(word)
+      } else {
+        setStatus("complete")
+      }
+      
+      if (progress) {
+        setCompletedCount(progress.dailyCompleted)
+        setTotalQuestions(progress.dailyGoal)
+      }
+    } catch (error) {
+      console.error("Failed to reset session with 10 more questions:", error)
+      setStatus("complete")
+    }
+  }, [deckId, completedCount, totalQuestions])
 
   return {
     currentIndex,

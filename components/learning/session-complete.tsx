@@ -1,8 +1,10 @@
 // components/learning/session-complete.tsx
 "use client"
 
+import { useState, useEffect } from "react"
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface SessionCompleteProps {
   completedCount: number
@@ -12,6 +14,16 @@ interface SessionCompleteProps {
 }
 
 export function SessionComplete({ completedCount, totalWords, onDashboard, onRetry }: SessionCompleteProps) {
+  const [mounted, setMounted] = useState(false)
+  const isMobile = useIsMobile()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const dashboardLabel = mounted && !isMobile ? "Dashboard (ESC)" : "Dashboard"
+  const retryLabel = mounted && !isMobile ? "Practice 10 More (Enter)" : "Practice 10 More"
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 animate-in fade-in duration-700">
       <div className="flex flex-col items-center gap-6 text-center">
@@ -27,12 +39,12 @@ export function SessionComplete({ completedCount, totalWords, onDashboard, onRet
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onDashboard}>Dashboard</Button>
-          <Button onClick={onRetry}>Practice Again</Button>
-        </div>
-        <div className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground/60">
-          <p>Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1.5 py-0.5 rounded text-foreground">Enter</kbd> to practice again</p>
-          <p>Press <kbd className="font-mono bg-muted border border-muted-foreground/20 px-1.5 py-0.5 rounded text-foreground">ESC</kbd> to return to dashboard</p>
+          <Button variant="outline" onClick={onDashboard}>
+            {dashboardLabel}
+          </Button>
+          <Button onClick={onRetry}>
+            {retryLabel}
+          </Button>
         </div>
       </div>
     </div>

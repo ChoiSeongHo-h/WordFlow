@@ -365,7 +365,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
     return (
       <SessionComplete 
         completedCount={session.completedCount} 
-        totalWords={totalQuestions} 
+        totalWords={session.totalQuestions} 
         onDashboard={() => router.push("/")}
         onRetry={session.resetSession} 
       />

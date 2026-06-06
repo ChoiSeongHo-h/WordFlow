@@ -123,11 +123,6 @@ export function SessionFeedback({
         {lastUserInput && resultCorrectAnswer && (
           <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
         )}
-        <div className="flex flex-col items-center gap-2 mt-1">
-          <p className="text-[10px] text-muted-foreground/50">
-            Continuing in a moment...
-          </p>
-        </div>
       </div>
     )
   }

@@ -78,7 +78,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     if (typeof document !== "undefined") {
       const inputEl = document.querySelector('input')
       if (inputEl) {
-        inputEl.focus()
+        inputEl.focus({ preventScroll: true })
       }
     }
 
@@ -286,7 +286,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       if (typeof document !== "undefined") {
         const inputEl = document.querySelector('input')
         if (inputEl) {
-          inputEl.focus()
+          inputEl.focus({ preventScroll: true })
         }
       }
       setStatus("correct")

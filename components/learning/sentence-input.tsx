@@ -7,6 +7,8 @@ import type { WordItem } from "@/lib/api"
 import type { SessionStatus, JumbledLetter } from "@/hooks/use-learning-session"
 
 interface SentenceInputProps {
+  inputRef: React.RefObject<HTMLInputElement | null>
+  isVirtualKeyboardEnabled: boolean
   currentWord: WordItem
   status: SessionStatus
   onInputChange: () => void
@@ -40,6 +42,8 @@ interface SentenceInputProps {
 }
 
 export function SentenceInput({
+  inputRef,
+  isVirtualKeyboardEnabled,
   currentWord,
   status,
   onInputChange,
@@ -60,7 +64,6 @@ export function SentenceInput({
   activeKeyLetterIds,
   setActiveKeyLetterIds
 }: SentenceInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
   const spanRef = useRef<HTMLSpanElement>(null)
   const jumbledRef = useRef<HTMLDivElement>(null)
   const pendingLetterRef = useRef<JumbledLetter | null>(null)
@@ -330,6 +333,7 @@ export function SentenceInput({
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           readOnly={status === "correct" || status === "typo" || status === "validating"}
+          inputMode={isVirtualKeyboardEnabled ? "none" : undefined}
           className={cn(
             "inline-block bg-transparent text-center text-xl sm:text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",
             "border-b-2 placeholder:text-transparent w-16",

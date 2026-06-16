@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Check, Eye, ArrowRight, AlertCircle, Send } from "lucide-react"
+import { Check, Eye, ArrowRight, AlertCircle, Send, Keyboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { WordItem } from "@/lib/api"
@@ -10,6 +10,8 @@ import type { SessionStatus, JumbledLetter } from "@/hooks/use-learning-session"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface SessionFeedbackProps {
+  isVirtualKeyboardEnabled: boolean
+  onToggleVirtualKeyboard: () => void
   status: SessionStatus
   currentWord: WordItem
   onShowHint: () => void
@@ -73,6 +75,8 @@ function TypoDiff({ user, correct }: { user: string; correct: string }) {
  * | **모바일** | **최종 정답 확인 (Show Answer)** | 키보드 비활성화 (가상 키보드 닫힘) |
  */
 export function SessionFeedback({ 
+  isVirtualKeyboardEnabled,
+  onToggleVirtualKeyboard,
   status, 
   currentWord, 
   onShowHint, 
@@ -100,14 +104,26 @@ export function SessionFeedback({
 
   const isMobileDevice = isMounted && isMobile
 
+  const renderVirtualKeyboardToggle = () => (
+    <Button
+      variant={isVirtualKeyboardEnabled ? "default" : "outline"}
+      size="icon"
+      onPointerDown={(e) => e.preventDefault()}
+      onClick={onToggleVirtualKeyboard}
+    >
+      <Keyboard className="size-4" />
+    </Button>
+  )
+
   if (status === "correct") {
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex flex-col items-center gap-2 mt-2">
+        <div className="flex items-center gap-2 mt-2">
           <Button size="sm" onClick={onNext} className="gap-1.5" variant="outline">
             Next Word (Enter)
             <ArrowRight className="size-3.5" />
           </Button>
+          {renderVirtualKeyboardToggle()}
         </div>
       </div>
     )
@@ -123,6 +139,13 @@ export function SessionFeedback({
         {lastUserInput && resultCorrectAnswer && (
           <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
         )}
+        <div className="flex items-center gap-2 mt-2">
+          <Button size="sm" onClick={onNext} className="gap-1.5" variant="outline">
+            Next Word (Enter)
+            <ArrowRight className="size-3.5" />
+          </Button>
+          {renderVirtualKeyboardToggle()}
+        </div>
       </div>
     )
   }
@@ -130,10 +153,13 @@ export function SessionFeedback({
   if (status === "incorrect") {
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in duration-200">
-        <Button variant="outline" size="sm" onClick={onShowHint}>
-          <Eye className="size-4 mr-2" />
-          Show Hint (Enter)
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onShowHint}>
+            <Eye className="size-4 mr-2" />
+            Show Hint (Enter)
+          </Button>
+          {renderVirtualKeyboardToggle()}
+        </div>
       </div>
     )
   }
@@ -210,11 +236,12 @@ export function SessionFeedback({
           {"The answer is: "}
           <strong className="text-foreground font-mono tracking-wider">{currentWord.answer}</strong>
         </p>
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2">
           <Button size="sm" onClick={onNext} className="gap-1.5">
             {isMobileDevice ? "Next Word" : "Next Word (Enter)"}
             <ArrowRight className="size-3.5" />
           </Button>
+          {renderVirtualKeyboardToggle()}
         </div>
       </div>
     )
@@ -222,15 +249,18 @@ export function SessionFeedback({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <Button 
-        size="sm" 
-        onClick={onSubmit} 
-        disabled={status === "validating"}
-        className="gap-2"
-      >
-        <Send className="size-4" />
-        Submit (Enter)
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button 
+          size="sm" 
+          onClick={onSubmit} 
+          disabled={status === "validating"}
+          className="gap-2"
+        >
+          <Send className="size-4" />
+          Submit (Enter)
+        </Button>
+        {renderVirtualKeyboardToggle()}
+      </div>
     </div>
   )
 }

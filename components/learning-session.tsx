@@ -12,6 +12,7 @@ import { useLearningSession, type JumbledLetter } from "@/hooks/use-learning-ses
 import { SentenceInput } from "@/components/learning/sentence-input"
 import { SessionFeedback } from "@/components/learning/session-feedback" 
 import { SessionComplete } from "@/components/learning/session-complete"
+import { VirtualKeyboard } from "@/components/learning/virtual-keyboard"
 
 interface LearningSessionProps {
   deckId: string
@@ -24,6 +25,146 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
   const session = useLearningSession(deckId, totalQuestions)
 
   const [isKeyboardActive, setIsKeyboardActive] = useState(false)
+  const [isVirtualKeyboardEnabled, setIsVirtualKeyboardEnabled] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("flow_use_virtual_keyboard")
+      setIsVirtualKeyboardEnabled(saved === "true")
+    }
+  }, [])
+
+  const handleToggleVirtualKeyboard = useCallback(() => {
+    setIsVirtualKeyboardEnabled((prev) => {
+      const next = !prev
+      localStorage.setItem("flow_use_virtual_keyboard", String(next))
+      return next
+    })
+  }, [])
+
+  const handleVirtualKeyPress = useCallback((key: string) => {
+    const input = inputRef.current
+    if (!input) return
+
+    const isReadOnly = session.status === "correct" || session.status === "typo" || session.status === "validating"
+
+    if (key === "Enter") {
+      if (session.status === "complete") {
+        session.resetSession()
+      } else if (session.status === "incorrect") {
+        session.showHint()
+      } else if (session.status === "show_answer" || session.status === "correct" || session.status === "typo") {
+        session.moveToNext()
+      } else {
+        const trimmed = input.value.trim()
+        if (trimmed) {
+          session.submitAnswer(trimmed)
+        }
+      }
+    } else if (key === "Clear") {
+      if (!isReadOnly) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        )?.set
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, "")
+        } else {
+          input.value = ""
+        }
+        
+        input.dispatchEvent(new Event("input", { bubbles: true }))
+        
+        input.focus({ preventScroll: true })
+      }
+    } else if (key === "Backspace") {
+      if (!isReadOnly) {
+        const start = input.selectionStart ?? input.value.length
+        const end = input.selectionEnd ?? input.value.length
+        const val = input.value
+        let newVal = val
+        let newCursorPos = start
+
+        if (start === end && start > 0) {
+          newVal = val.substring(0, start - 1) + val.substring(end)
+          newCursorPos = start - 1
+        } else if (start !== end) {
+          newVal = val.substring(0, start) + val.substring(end)
+          newCursorPos = start
+        }
+
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        )?.set
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, newVal)
+        } else {
+          input.value = newVal
+        }
+        
+        input.dispatchEvent(new Event("input", { bubbles: true }))
+        
+        input.focus({ preventScroll: true })
+        input.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    } else if (key === "Space") {
+      if (!isReadOnly) {
+        const start = input.selectionStart ?? input.value.length
+        const end = input.selectionEnd ?? input.value.length
+        const val = input.value
+        const newVal = val.substring(0, start) + " " + val.substring(end)
+        const newCursorPos = start + 1
+
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        )?.set
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, newVal)
+        } else {
+          input.value = newVal
+        }
+        
+        input.dispatchEvent(new Event("input", { bubbles: true }))
+        
+        input.focus({ preventScroll: true })
+        input.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    } else {
+      if (!isReadOnly) {
+        const char = key.toLowerCase()
+        const start = input.selectionStart ?? input.value.length
+        const end = input.selectionEnd ?? input.value.length
+        const val = input.value
+        const newVal = val.substring(0, start) + char + val.substring(end)
+        const newCursorPos = start + 1
+
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value"
+        )?.set
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, newVal)
+        } else {
+          input.value = newVal
+        }
+        
+        input.dispatchEvent(new Event("input", { bubbles: true }))
+        
+        input.focus({ preventScroll: true })
+        input.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }
+  }, [session])
+
+  const showVirtualKeyboard = isVirtualKeyboardEnabled && 
+    session.status !== "jumbled" && 
+    session.status !== "jumbled_incorrect" && 
+    session.status !== "complete"
+
+  const isLayoutKeyboardActive = isKeyboardActive || showVirtualKeyboard
 
   // Drag-and-drop state
   const [activeDrag, setActiveDrag] = useState<{
@@ -397,7 +538,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
 
       <header className={cn(
         "flex items-center justify-between px-4 md:px-8 transition-all duration-300",
-        isKeyboardActive ? "py-1.5" : "py-3"
+        isLayoutKeyboardActive ? "py-1.5" : "py-3"
       )}>
         <div className="flex flex-1 items-center gap-4">
           <span className="text-xs font-medium text-muted-foreground">
@@ -414,11 +555,11 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
 
       <main className={cn(
         "flex flex-1 flex-col items-center justify-center px-4 sm:px-6 transition-all duration-300",
-        isKeyboardActive ? "py-2" : "py-6 sm:py-0"
+        isLayoutKeyboardActive ? "py-2" : "py-6 sm:py-0"
       )}>
         <div className={cn(
           "flex w-full max-w-3xl flex-col items-center transition-all duration-300",
-          isKeyboardActive ? "gap-2" : "gap-4 sm:gap-6 md:gap-12"
+          isLayoutKeyboardActive ? "gap-2" : "gap-4 sm:gap-6 md:gap-12"
         )}>
           {/* Korean Translation */}
           <p className="text-center text-base sm:text-lg md:text-xl text-muted-foreground/80 font-light tracking-wide">
@@ -440,6 +581,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           {session.currentWord && (
             <div className="text-center text-xl sm:text-2xl md:text-3xl leading-relaxed">
               <SentenceInput
+                inputRef={inputRef}
+                isVirtualKeyboardEnabled={isVirtualKeyboardEnabled}
                 currentWord={session.currentWord}
                 status={session.status}
                 onInputChange={session.handleInputStart}
@@ -466,10 +609,12 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           {/* Feedback Area */}
           <div className={cn(
             "flex w-full flex-col items-center justify-start gap-3 relative transition-all duration-300",
-            isKeyboardActive ? "min-h-[2.5rem]" : "min-h-[4.5rem] sm:min-h-[6rem]"
+            isLayoutKeyboardActive ? "min-h-[2.5rem]" : "min-h-[4.5rem] sm:min-h-[6rem]"
           )}>
             {session.currentWord && (
               <SessionFeedback 
+                isVirtualKeyboardEnabled={isVirtualKeyboardEnabled}
+                onToggleVirtualKeyboard={handleToggleVirtualKeyboard}
                 status={session.status} 
                 currentWord={session.currentWord} 
                 onShowHint={session.showHint} 
@@ -482,9 +627,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onSubmitJumbled={session.submitJumbledAnswer}
                 onShowFinalAnswer={session.showFinalAnswer}
                 onSubmit={() => {
-                  const inputEl = document.querySelector('input')
-                  if (inputEl && inputEl.value.trim()) {
-                    session.submitAnswer(inputEl.value.trim())
+                  if (inputRef.current && inputRef.current.value.trim()) {
+                    session.submitAnswer(inputRef.current.value.trim())
                   }
                 }}
                 activeDrag={activeDrag}
@@ -497,6 +641,15 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           </div>
         </div>
       </main>
+
+      {/* Virtual Keyboard */}
+      {showVirtualKeyboard && (
+        <VirtualKeyboard
+          onKeyPress={handleVirtualKeyPress}
+          status={session.status}
+          disabled={session.status === "validating"}
+        />
+      )}
 
       {/* Floating Dragged Letter Indicator */}
       {activeDrag && (

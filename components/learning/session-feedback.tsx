@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Check, Eye, ArrowRight, AlertCircle, Send, Keyboard } from "lucide-react"
+import { Check, Eye, ArrowRight, AlertCircle, Send, Keyboard, Volume2, CornerDownLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { WordItem } from "@/lib/api"
@@ -42,6 +42,7 @@ interface SessionFeedbackProps {
   hasDraggedRef: React.RefObject<boolean>
   poolContainerRef: React.RefObject<HTMLDivElement | null>
   activeKeyLetterIds: string[]
+  onReplay?: () => void
 }
 
 interface DiffOp {
@@ -194,7 +195,8 @@ export function SessionFeedback({
   onDragStart,
   hasDraggedRef,
   poolContainerRef,
-  activeKeyLetterIds
+  activeKeyLetterIds,
+  onReplay
 }: SessionFeedbackProps) {
   const [isMounted, setIsMounted] = useState(false)
   const isMobile = useIsMobile()
@@ -208,7 +210,7 @@ export function SessionFeedback({
   const renderVirtualKeyboardToggle = () => (
     <Button
       variant={isVirtualKeyboardEnabled ? "default" : "outline"}
-      size="icon"
+      size="icon-lg"
       onPointerDown={(e) => e.preventDefault()}
       onClick={onToggleVirtualKeyboard}
     >
@@ -220,9 +222,13 @@ export function SessionFeedback({
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center gap-2 mt-2">
-          <Button size="sm" onClick={onNext} className="gap-1.5" variant="outline">
-            Next Word (Enter)
+          <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
+            <Volume2 className="size-4" />
+            Listen (R)
+          </Button>
+          <Button size="lg" onClick={onNext} className="gap-1.5" variant="default">
             <ArrowRight className="size-3.5" />
+            <span>Next Word (<CornerDownLeft className="inline size-3" />)</span>
           </Button>
           {renderVirtualKeyboardToggle()}
         </div>
@@ -241,9 +247,13 @@ export function SessionFeedback({
           <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
         )}
         <div className="flex items-center gap-2 mt-2">
-          <Button size="sm" onClick={onNext} className="gap-1.5" variant="outline">
-            Next Word (Enter)
+          <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
+            <Volume2 className="size-4" />
+            Listen (R)
+          </Button>
+          <Button size="lg" onClick={onNext} className="gap-1.5" variant="default">
             <ArrowRight className="size-3.5" />
+            <span>Next Word (<CornerDownLeft className="inline size-3" />)</span>
           </Button>
           {renderVirtualKeyboardToggle()}
         </div>
@@ -266,9 +276,9 @@ export function SessionFeedback({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onShowHint}>
+          <Button variant="default" size="lg" onClick={onShowHint}>
             <Eye className="size-4 mr-2" />
-            Show Hint (Enter)
+            <span>Show Hint (<CornerDownLeft className="inline size-3" />)</span>
           </Button>
           {renderVirtualKeyboardToggle()}
         </div>
@@ -318,19 +328,19 @@ export function SessionFeedback({
         
         <div className="flex flex-col items-center gap-2">
           {status === "jumbled_incorrect" ? (
-            <Button variant="destructive" size="sm" onClick={onShowFinalAnswer} className="gap-2">
+            <Button variant="destructive" size="lg" onClick={onShowFinalAnswer} className="gap-2">
               <Eye className="size-4" />
-              {isMobileDevice ? "Show Answer" : "Show Answer (Enter)"}
+              {isMobileDevice ? "Show Answer" : <span>Show Answer (<CornerDownLeft className="inline size-3" />)</span>}
             </Button>
           ) : (
             <Button 
-              size="sm" 
+              size="lg" 
               onClick={onSubmitJumbled} 
               className="gap-2"
               disabled={placedLetters.length !== jumbledLetters.length}
             >
               <Send className="size-4" />
-              {isMobileDevice ? "Submit" : "Submit (Enter)"}
+              {isMobileDevice ? "Submit" : <span>Submit (<CornerDownLeft className="inline size-3" />)</span>}
             </Button>
           )}
           <p className="text-[10px] text-muted-foreground/50">
@@ -346,12 +356,16 @@ export function SessionFeedback({
       <div className="flex flex-col items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
         <p className="text-sm text-muted-foreground">
           {"The answer is: "}
-          <strong className="text-foreground font-mono tracking-wider">{currentWord.answer}</strong>
+          <strong className="text-foreground font-semibold tracking-wide">{currentWord.answer}</strong>
         </p>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={onNext} className="gap-1.5">
-            {isMobileDevice ? "Next Word" : "Next Word (Enter)"}
+          <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
+            <Volume2 className="size-4" />
+            Listen (R)
+          </Button>
+          <Button size="lg" onClick={onNext} className="gap-1.5" variant="default">
             <ArrowRight className="size-3.5" />
+            {isMobileDevice ? "Next Word" : <span>Next Word (<CornerDownLeft className="inline size-3" />)</span>}
           </Button>
           {renderVirtualKeyboardToggle()}
         </div>
@@ -363,13 +377,13 @@ export function SessionFeedback({
     <div className="flex flex-col items-center gap-2">
       <div className="flex items-center gap-2">
         <Button 
-          size="sm" 
+          size="lg" 
           onClick={onSubmit} 
           disabled={status === "validating"}
           className="gap-2"
         >
           <Send className="size-4" />
-          Submit (Enter)
+          <span>Submit (<CornerDownLeft className="inline size-3" />)</span>
         </Button>
         {renderVirtualKeyboardToggle()}
       </div>

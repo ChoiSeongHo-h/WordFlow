@@ -12,11 +12,13 @@ export function useKeyboardShortcut(key: string, callback: () => void, disabled:
     if (disabled) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === key) {
-        // Only prevent default and execute if we're not typing in an input 
+      if (event.key.toLowerCase() === key.toLowerCase()) {
+        // Only prevent default and execute if we're not typing in an active input 
         // OR if the key is Escape (which we want to globalize)
         if (event.target instanceof HTMLInputElement && key !== "Escape") {
-          return
+          if (!event.target.readOnly) {
+            return
+          }
         }
         
         event.preventDefault()

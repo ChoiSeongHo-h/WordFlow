@@ -32,6 +32,7 @@ interface UseLearningSessionReturn {
   showFinalAnswer: () => void
   moveToNext: () => void
   resetSession: () => void
+  replaySpeech: () => void
 }
 
 export function useLearningSession(deckId: string, initialTotalQuestions: number): UseLearningSessionReturn {
@@ -113,14 +114,11 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     }
   }, [completedCount, totalQuestions])
 
-  const playSpeechAndMoveToNext = useCallback((answerText: string) => {
+  const playSpeech = useCallback((answerText: string) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel()
 
-      if (!currentWord) {
-        moveToNext()
-        return
-      }
+      if (!currentWord) return
 
       let userEmail = "guest"
       try {
@@ -155,32 +153,15 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         }
       }
 
-      let finished = false
-      const handleFinish = () => {
-        if (!finished) {
-          finished = true
-          moveToNext()
-        }
-      }
-
-      const speechTimeout = setTimeout(() => {
-        handleFinish()
-      }, 8000)
-
-      utterance.onend = () => {
-        clearTimeout(speechTimeout)
-        handleFinish()
-      }
-      utterance.onerror = () => {
-        clearTimeout(speechTimeout)
-        handleFinish()
-      }
-
       window.speechSynthesis.speak(utterance)
-    } else {
-      setTimeout(() => moveToNext(), 1500)
     }
-  }, [currentWord, moveToNext])
+  }, [currentWord])
+
+  const replaySpeech = useCallback(() => {
+    if (!currentWord) return
+    const finalAnswer = resultCorrectAnswer || currentWord.answer
+    playSpeech(finalAnswer)
+  }, [currentWord, resultCorrectAnswer, playSpeech])
 
   const submitAnswer = useCallback(async (answer: string) => {
     if (!answer || status === "validating" || status === "correct" || status === "typo" || !currentWord) return
@@ -205,7 +186,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         }
         
         const finalAnswer = result.correctAnswer || currentWord.answer
-        playSpeechAndMoveToNext(finalAnswer)
+        playSpeech(finalAnswer)
       } else {
         setIsClose(!!result.isClose)
         setDiffCount(result.diffCount || 0)
@@ -215,7 +196,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       console.error("Verification failed", error)
       setStatus("idle") 
     }
-  }, [currentWord, status, playSpeechAndMoveToNext])
+  }, [currentWord, status, playSpeech])
 
   const showHint = useCallback(() => {
     if (status === "incorrect" && currentWord) {
@@ -304,18 +285,18 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         }
       }
       setStatus("correct")
-      playSpeechAndMoveToNext(currentWord.answer)
+      playSpeech(currentWord.answer)
     } else {
       setStatus("jumbled_incorrect")
     }
-  }, [status, currentWord, placedLetters, playSpeechAndMoveToNext])
+  }, [status, currentWord, placedLetters, playSpeech])
 
   const showFinalAnswer = useCallback(() => {
     if (status === "jumbled_incorrect" && currentWord) {
       setStatus("show_answer")
-      playSpeechAndMoveToNext(currentWord.answer)
+      playSpeech(currentWord.answer)
     }
-  }, [status, currentWord, playSpeechAndMoveToNext])
+  }, [status, currentWord, playSpeech])
 
   const resetSession = useCallback(async () => {
     const nextGoal = Math.max(completedCount, totalQuestions) + 10
@@ -378,5 +359,6 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     showFinalAnswer,
     moveToNext,
     resetSession,
+    replaySpeech,
   }
 }

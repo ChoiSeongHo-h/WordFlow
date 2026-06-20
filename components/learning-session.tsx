@@ -501,6 +501,11 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
       session.moveToNext()
     }
   })
+  useKeyboardShortcut("r", () => {
+    if (session.status === "correct" || session.status === "typo" || session.status === "show_answer") {
+      session.replaySpeech()
+    }
+  })
 
   if (session.status === "complete") {
     return (
@@ -638,6 +643,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 hasDraggedRef={hasDraggedRef}
                 poolContainerRef={poolContainerRef}
                 activeKeyLetterIds={activeKeyLetterIds}
+                onReplay={session.replaySpeech}
               />
             )}
           </div>

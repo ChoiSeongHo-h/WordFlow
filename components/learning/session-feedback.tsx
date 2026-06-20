@@ -18,6 +18,8 @@ interface SessionFeedbackProps {
   onNext: () => void
   lastUserInput?: string
   resultCorrectAnswer?: string
+  isClose?: boolean
+  diffCount?: number
   jumbledLetters?: JumbledLetter[]
   placedLetters?: JumbledLetter[]
   onAddLetter?: (letter: JumbledLetter) => void
@@ -42,15 +44,112 @@ interface SessionFeedbackProps {
   activeKeyLetterIds: string[]
 }
 
+interface DiffOp {
+  type: 'match' | 'substitute' | 'delete' | 'insert';
+  charA?: string;
+  charB?: string;
+}
+
+function alignStrings(A: string, B: string): DiffOp[] {
+  const m = A.length;
+  const n = B.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (A[i - 1].toLowerCase() === B[j - 1].toLowerCase()) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = Math.min(
+          dp[i - 1][j - 1] + 1, // substitution
+          dp[i - 1][j] + 1,     // deletion from A
+          dp[i][j - 1] + 1      // insertion to A
+        );
+      }
+    }
+  }
+  
+  const ops: DiffOp[] = [];
+  let i = m;
+  let j = n;
+  
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && A[i - 1].toLowerCase() === B[j - 1].toLowerCase()) {
+      ops.push({ type: 'match', charA: A[i - 1], charB: B[j - 1] });
+      i--;
+      j--;
+    } else {
+      const subCost = (i > 0 && j > 0) ? dp[i - 1][j - 1] : Infinity;
+      const delCost = (i > 0) ? dp[i - 1][j] : Infinity;
+      const insCost = (j > 0) ? dp[i][j - 1] : Infinity;
+      
+      const minCost = Math.min(subCost, delCost, insCost);
+      
+      if (minCost === subCost) {
+        ops.push({ type: 'substitute', charA: A[i - 1], charB: B[j - 1] });
+        i--;
+        j--;
+      } else if (minCost === delCost) {
+        ops.push({ type: 'delete', charA: A[i - 1] });
+        i--;
+      } else {
+        ops.push({ type: 'insert', charB: B[j - 1] });
+        j--;
+      }
+    }
+  }
+  
+  return ops.reverse();
+}
+
 function TypoDiff({ user, correct }: { user: string; correct: string }) {
+  const ops = alignStrings(user, correct);
+  
+  const userSpans = ops.map((op, idx) => {
+    if (op.type === 'match') {
+      return <span key={idx}>{op.charA}</span>;
+    }
+    if (op.type === 'substitute' || op.type === 'delete') {
+      return (
+        <span 
+          key={idx} 
+          className="text-destructive font-extrabold bg-destructive/20 px-0.5 rounded-sm"
+        >
+          {op.charA}
+        </span>
+      );
+    }
+    return null;
+  });
+
+  const correctSpans = ops.map((op, idx) => {
+    if (op.type === 'match') {
+      return <span key={idx}>{op.charB}</span>;
+    }
+    if (op.type === 'substitute' || op.type === 'insert') {
+      return (
+        <span 
+          key={idx} 
+          className="text-warning-foreground font-black bg-warning/30 px-0.5 rounded-sm"
+        >
+          {op.charB}
+        </span>
+      );
+    }
+    return null;
+  });
+
   return (
-    <div className="flex items-center gap-2 text-xs md:text-sm font-medium">
-      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive/70 line-through decoration-destructive/30">
-        {user}
+    <div className="flex items-center gap-2 text-xs md:text-sm font-medium mt-1 animate-in fade-in duration-200">
+      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive/70 line-through decoration-destructive/30 flex items-center">
+        {userSpans}
       </span>
       <ArrowRight className="size-3 text-muted-foreground/30" />
-      <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning-foreground font-bold animate-pulse">
-        {correct}
+      <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning-foreground font-bold animate-pulse flex items-center">
+        {correctSpans}
       </span>
     </div>
   )
@@ -83,6 +182,8 @@ export function SessionFeedback({
   onNext,
   lastUserInput,
   resultCorrectAnswer,
+  isClose = false,
+  diffCount = 0,
   jumbledLetters = [],
   placedLetters = [],
   onAddLetter,
@@ -153,6 +254,17 @@ export function SessionFeedback({
   if (status === "incorrect") {
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in duration-200">
+        {isClose && (
+          <div className="flex flex-col items-center gap-1 mb-2 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 text-warning">
+              <AlertCircle className="size-4" />
+              <span className="font-semibold text-sm">Close!</span>
+            </div>
+            <span className="text-xs md:text-sm text-warning font-medium">
+              It differs by <strong className="font-extrabold">{diffCount} {diffCount === 1 ? 'letter' : 'letters'}</strong> from the correct answer.
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onShowHint}>
             <Eye className="size-4 mr-2" />

@@ -621,6 +621,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onNext={session.moveToNext} 
                 lastUserInput={session.lastUserInput}
                 resultCorrectAnswer={session.resultCorrectAnswer}
+                isClose={session.isClose}
+                diffCount={session.diffCount}
                 jumbledLetters={session.jumbledLetters}
                 placedLetters={session.placedLetters}
                 onAddLetter={session.addPlacedLetter}

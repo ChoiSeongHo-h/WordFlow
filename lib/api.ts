@@ -62,6 +62,8 @@ export interface VerifyResponse {
   correctAnswer?: string;
   solvedCount?: number;
   targetCount?: number;
+  isClose?: boolean;
+  diffCount?: number;
 }
 
 export function setAuthToken(token: string) {
@@ -346,7 +348,9 @@ export async function verifyAnswer(wordId: string, userInput: string): Promise<V
       isTypo: data.isTypo,
       correctAnswer: data.correctAnswer,
       solvedCount: data.solvedCount || data.finishCount,
-      targetCount: data.targetCount || data.goalCount
+      targetCount: data.targetCount || data.goalCount,
+      isClose: data.isClose,
+      diffCount: data.diffCount
     };
   }
   return { isCorrect: false }; 

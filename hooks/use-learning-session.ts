@@ -20,6 +20,8 @@ interface UseLearningSessionReturn {
   resultCorrectAnswer: string
   jumbledLetters: JumbledLetter[]
   placedLetters: JumbledLetter[]
+  isClose: boolean
+  diffCount: number
   handleInputStart: () => void
   submitAnswer: (answer: string) => Promise<void>
   showHint: () => void // This will now trigger jumbled mode
@@ -42,6 +44,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   const [resultCorrectAnswer, setResultCorrectAnswer] = useState("")
   const [jumbledLetters, setJumbledLetters] = useState<JumbledLetter[]>([])
   const [placedLetters, setPlacedLetters] = useState<JumbledLetter[]>([])
+  const [isClose, setIsClose] = useState(false)
+  const [diffCount, setDiffCount] = useState(0)
   const isMovingRef = useRef(false)
 
   const progressPercentage = Math.round((completedCount / totalQuestions) * 100)
@@ -65,7 +69,11 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   }, [deckId])
 
   const handleInputStart = useCallback(() => {
-    if (status === "incorrect") setStatus("idle")
+    if (status === "incorrect") {
+      setStatus("idle")
+      setIsClose(false)
+      setDiffCount(0)
+    }
   }, [status])
 
   const moveToNext = useCallback(async () => {
@@ -92,6 +100,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         setCurrentWord(nextWord)
         setJumbledLetters([])
         setPlacedLetters([])
+        setIsClose(false)
+        setDiffCount(0)
         setStatus("idle")
       } else {
         // 백엔드에서 더 이상 가져올 문제가 없으면 완료
@@ -185,6 +195,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       if (result.targetCount !== undefined) setTotalQuestions(result.targetCount)
 
       if (result.isCorrect) {
+        setIsClose(false)
+        setDiffCount(0)
         if (result.isTypo) {
           setStatus("typo")
           setResultCorrectAnswer(result.correctAnswer || currentWord.answer)
@@ -195,6 +207,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         const finalAnswer = result.correctAnswer || currentWord.answer
         playSpeechAndMoveToNext(finalAnswer)
       } else {
+        setIsClose(!!result.isClose)
+        setDiffCount(result.diffCount || 0)
         setStatus("incorrect")
       }
     } catch (error) {
@@ -317,6 +331,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     setCurrentWord(null)
     setJumbledLetters([])
     setPlacedLetters([])
+    setIsClose(false)
+    setDiffCount(0)
     
     try {
       await startSession(deckId, nextGoal)
@@ -350,6 +366,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     resultCorrectAnswer,
     jumbledLetters,
     placedLetters,
+    isClose,
+    diffCount,
     handleInputStart,
     submitAnswer,
     showHint,

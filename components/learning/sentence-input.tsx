@@ -68,6 +68,7 @@ export function SentenceInput({
   const jumbledRef = useRef<HTMLDivElement>(null)
   const pendingLetterRef = useRef<JumbledLetter | null>(null)
   const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
+  const prevWordIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     return () => {
@@ -125,7 +126,9 @@ export function SentenceInput({
 
   useEffect(() => {
     if (inputRef.current) {
-      if (status === "idle") {
+      const currentId = currentWord?.id || null
+      if (currentId !== prevWordIdRef.current) {
+        prevWordIdRef.current = currentId
         inputRef.current.value = ""
         updateInputWidth("")
         inputRef.current.focus({ preventScroll: true })

@@ -276,8 +276,8 @@ export function SessionFeedback({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Button variant="default" size="lg" onClick={onShowHint}>
-            <Eye className="size-4 mr-2" />
+          <Button variant="default" size="lg" onClick={onShowHint} className="gap-2">
+            <Eye className="size-4" />
             <span>Show Hint (<CornerDownLeft className="inline size-3" />)</span>
           </Button>
           {renderVirtualKeyboardToggle()}

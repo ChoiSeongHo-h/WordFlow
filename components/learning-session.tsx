@@ -3,11 +3,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { X, Loader2 } from "lucide-react"
+import { X, Loader2, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut"
+import { useUserTheme } from "@/hooks/use-user-theme"
 import { useLearningSession, type JumbledLetter } from "@/hooks/use-learning-session"
 import { SentenceInput } from "@/components/learning/sentence-input"
 import { SessionFeedback } from "@/components/learning/session-feedback" 
@@ -23,6 +24,7 @@ interface LearningSessionProps {
 export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningSessionProps) {
   const router = useRouter()
   const session = useLearningSession(deckId, totalQuestions)
+  const { setTheme, resolvedTheme, mounted } = useUserTheme()
 
   const [isKeyboardActive, setIsKeyboardActive] = useState(false)
   const [isVirtualKeyboardEnabled, setIsVirtualKeyboardEnabled] = useState(false)
@@ -552,6 +554,23 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-sm text-muted-foreground sm:inline">{deckTitle}</span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="rounded-full hover:bg-accent"
+            aria-label="Toggle Theme"
+          >
+            {mounted ? (
+              resolvedTheme === "dark" ? (
+                <Sun className="size-5 text-amber-500 transition-all hover:scale-110" />
+              ) : (
+                <Moon className="size-5 text-indigo-900 dark:text-indigo-400 transition-all hover:scale-110" />
+              )
+            ) : (
+              <span className="size-5" />
+            )}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
             <X className="size-5" />
           </Button>

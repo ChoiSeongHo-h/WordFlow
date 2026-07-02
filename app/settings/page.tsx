@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Zap, Lock, CreditCard, LogOut, CheckCircle2, Volume2, Play } from "lucide-react"
+import { ArrowLeft, Zap, Lock, CreditCard, LogOut, CheckCircle2, Volume2, Play, Palette } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,10 +19,12 @@ import {
 } from "@/components/ui/select"
 
 import { removeAuthToken } from "@/lib/api"
+import { useUserTheme } from "@/hooks/use-user-theme"
 
 export default function SettingsPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { theme, setTheme, mounted } = useUserTheme()
   const [isChangingPassword, setIsChangingPassword] = React.useState(false)
   const [isUpdatingSubscription, setIsUpdatingSubscription] = React.useState(false)
 
@@ -287,6 +289,35 @@ export default function SettingsPage() {
                     Test
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Theme Settings Card */}
+          <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="border-b border-border/20 bg-muted/20 pb-4">
+              <div className="flex items-center gap-2">
+                <Palette className="size-4 text-primary" />
+                <CardTitle className="text-lg">Theme Settings</CardTitle>
+              </div>
+              <CardDescription>Select your preferred application color theme.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-2.5">
+                <Label htmlFor="theme-select">App Theme</Label>
+                <Select
+                  value={mounted ? theme : "system"}
+                  onValueChange={(val) => setTheme(val)}
+                >
+                  <SelectTrigger id="theme-select" className="w-full bg-background/50">
+                    <SelectValue placeholder="Select theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light Mode</SelectItem>
+                    <SelectItem value="dark">Dark Mode</SelectItem>
+                    <SelectItem value="system">System Default</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

@@ -15,6 +15,8 @@ interface SentenceInputProps {
   onSubmit: (val: string) => void
   onHintRequest: () => void
   onSkip: () => void
+  lastUserInput?: string
+  resultCorrectAnswer?: string
   placedLetters?: JumbledLetter[]
   onRemoveLetter?: (letter: JumbledLetter) => void
   onReorderLetter?: (fromIndex: number, toIndex: number) => void
@@ -50,6 +52,8 @@ export function SentenceInput({
   onSubmit,
   onHintRequest,
   onSkip,
+  lastUserInput,
+  resultCorrectAnswer,
   placedLetters = [],
   onRemoveLetter,
   onReorderLetter,
@@ -125,22 +129,48 @@ export function SentenceInput({
   }, [currentWord])
 
   useEffect(() => {
-    if (inputRef.current) {
-      const currentId = currentWord?.id || null
-      if (currentId !== prevWordIdRef.current) {
+    if (inputRef.current && currentWord) {
+      const currentId = currentWord.id
+      const isNewWord = currentId !== prevWordIdRef.current
+      
+      if (isNewWord) {
         prevWordIdRef.current = currentId
-        inputRef.current.value = ""
-        updateInputWidth("")
         inputRef.current.focus({ preventScroll: true })
-      } else if (status === "correct" && currentWord) {
-        if (placedLetters.length > 0 || !inputRef.current.value) {
-          // Fix for returning from Jumbled Mode to standard display
+      }
+
+      if (isNewWord) {
+        if (status === "idle" || status === "validating") {
+          inputRef.current.value = ""
+          updateInputWidth("")
+        } else if (status === "correct") {
+          const displayVal = resultCorrectAnswer || currentWord.answer
+          inputRef.current.value = displayVal
+          updateInputWidth(displayVal)
+        } else if (status === "show_answer") {
           inputRef.current.value = currentWord.answer
           updateInputWidth(currentWord.answer)
+        } else if (status === "typo" || status === "incorrect") {
+          const val = lastUserInput || ""
+          inputRef.current.value = val
+          updateInputWidth(val)
+        }
+      } else {
+        // Not a new word - only update input value when status changes to non-idle/non-validating states
+        if (status === "correct") {
+          const displayVal = resultCorrectAnswer || currentWord.answer
+          inputRef.current.value = displayVal
+          updateInputWidth(displayVal)
+        } else if (status === "show_answer") {
+          inputRef.current.value = currentWord.answer
+          updateInputWidth(currentWord.answer)
+        } else if (status === "typo" || status === "incorrect") {
+          const val = lastUserInput || ""
+          inputRef.current.value = val
+          updateInputWidth(val)
         }
       }
     }
-  }, [currentWord, status, updateInputWidth, placedLetters])
+  }, [currentWord, status, updateInputWidth, lastUserInput, resultCorrectAnswer])
 
   useEffect(() => {
     if (isJumbledMode && jumbledRef.current) {
@@ -165,6 +195,12 @@ export function SentenceInput({
   }, [isJumbledMode, status, placedLetters]) // Ensure refocus after adding/removing letters
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (status === "validating") {
+      if (inputRef.current) {
+        inputRef.current.value = lastUserInput || ""
+      }
+      return
+    }
     updateInputWidth(e.target.value)
     onInputChange()
   }
@@ -178,6 +214,7 @@ export function SentenceInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault()
+      e.stopPropagation()
       if (status === "validating") return
 
       if (status === "correct" || status === "typo" || isJumbledMode) {
@@ -335,7 +372,7 @@ export function SentenceInput({
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          readOnly={status === "correct" || status === "typo" || status === "validating"}
+          readOnly={status === "correct" || status === "typo" || status === "show_answer"}
           inputMode={isVirtualKeyboardEnabled ? "none" : undefined}
           className={cn(
             "inline-block bg-transparent text-center text-xl sm:text-2xl md:text-3xl font-semibold outline-none transition-all duration-300",

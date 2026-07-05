@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Check, Eye, ArrowRight, AlertCircle, Send, Keyboard, Volume2, CornerDownLeft } from "lucide-react"
+import { Check, Eye, ArrowRight, ArrowLeft, AlertCircle, Send, Keyboard, Volume2, CornerDownLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { WordItem } from "@/lib/api"
@@ -16,6 +16,8 @@ interface SessionFeedbackProps {
   currentWord: WordItem
   onShowHint: () => void
   onNext: () => void
+  hasPrev?: boolean
+  onPrev?: () => void
   lastUserInput?: string
   resultCorrectAnswer?: string
   isClose?: boolean
@@ -181,6 +183,8 @@ export function SessionFeedback({
   currentWord, 
   onShowHint, 
   onNext,
+  hasPrev,
+  onPrev,
   lastUserInput,
   resultCorrectAnswer,
   isClose = false,
@@ -222,6 +226,12 @@ export function SessionFeedback({
     return (
       <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center gap-2 mt-2">
+          {hasPrev && onPrev && (
+            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
+              <ArrowLeft className="size-3.5" />
+              <span>Prev Word (B)</span>
+            </Button>
+          )}
           <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
             <Volume2 className="size-4" />
             Listen (R)
@@ -247,6 +257,12 @@ export function SessionFeedback({
           <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
         )}
         <div className="flex items-center gap-2 mt-2">
+          {hasPrev && onPrev && (
+            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
+              <ArrowLeft className="size-3.5" />
+              <span>Prev Word (B)</span>
+            </Button>
+          )}
           <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
             <Volume2 className="size-4" />
             Listen (R)
@@ -276,6 +292,12 @@ export function SessionFeedback({
           </div>
         )}
         <div className="flex items-center gap-2">
+          {hasPrev && onPrev && (
+            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
+              <ArrowLeft className="size-3.5" />
+              <span>Prev Word (B)</span>
+            </Button>
+          )}
           <Button variant="default" size="lg" onClick={onShowHint} className="gap-2">
             <Eye className="size-4" />
             <span>Show Hint (<CornerDownLeft className="inline size-3" />)</span>
@@ -359,6 +381,12 @@ export function SessionFeedback({
           <strong className="text-foreground font-semibold tracking-wide">{currentWord.answer}</strong>
         </p>
         <div className="flex items-center gap-2">
+          {hasPrev && onPrev && (
+            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
+              <ArrowLeft className="size-3.5" />
+              <span>Prev Word (B)</span>
+            </Button>
+          )}
           <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
             <Volume2 className="size-4" />
             Listen (R)

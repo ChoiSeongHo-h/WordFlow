@@ -1,12 +1,23 @@
 // hooks/use-learning-session.ts
 import { useState, useCallback, useEffect, useRef } from "react"
-import { verifyAnswer, fetchNextWord, getUserProgress, startSession, type WordItem } from "@/lib/api"
+import { verifyAnswer, fetchNextWord, getUserProgress, startSession, type WordItem, SessionConflictError } from "@/lib/api"
 
 export type SessionStatus = "idle" | "validating" | "correct" | "incorrect" | "typo" | "jumbled" | "jumbled_incorrect" | "show_answer" | "complete"
 
 export interface JumbledLetter {
   id: string
   char: string
+}
+
+export interface HistoryItem {
+  word: WordItem
+  status: SessionStatus
+  lastUserInput: string
+  resultCorrectAnswer: string
+  jumbledLetters: JumbledLetter[]
+  placedLetters: JumbledLetter[]
+  isClose: boolean
+  diffCount: number
 }
 
 interface UseLearningSessionReturn {
@@ -22,43 +33,80 @@ interface UseLearningSessionReturn {
   placedLetters: JumbledLetter[]
   isClose: boolean
   diffCount: number
+  isConflict: boolean
+  hasPrev: boolean
   handleInputStart: () => void
   submitAnswer: (answer: string) => Promise<void>
-  showHint: () => void // This will now trigger jumbled mode
+  showHint: () => void
   addPlacedLetter: (letter: JumbledLetter, index?: number) => void
   removePlacedLetter: (letter: JumbledLetter) => void
   reorderPlacedLetter: (fromIndex: number, toIndex: number) => void
   submitJumbledAnswer: () => void
   showFinalAnswer: () => void
   moveToNext: () => void
+  moveToPrev: () => void
   resetSession: () => void
   replaySpeech: () => void
 }
 
 export function useLearningSession(deckId: string, initialTotalQuestions: number): UseLearningSessionReturn {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [wordsHistory, setWordsHistory] = useState<HistoryItem[]>([])
+  const [historyIndex, setHistoryIndex] = useState<number>(0)
   const [completedCount, setCompletedCount] = useState(0)
   const [totalQuestions, setTotalQuestions] = useState(initialTotalQuestions)
-  const [status, setStatus] = useState<SessionStatus>("idle")
-  const [currentWord, setCurrentWord] = useState<WordItem | null>(null)
-  const [lastUserInput, setLastUserInput] = useState("")
-  const [resultCorrectAnswer, setResultCorrectAnswer] = useState("")
-  const [jumbledLetters, setJumbledLetters] = useState<JumbledLetter[]>([])
-  const [placedLetters, setPlacedLetters] = useState<JumbledLetter[]>([])
-  const [isClose, setIsClose] = useState(false)
-  const [diffCount, setDiffCount] = useState(0)
+  const [isConflict, setIsConflict] = useState(false)
+  const [globalStatus, setGlobalStatus] = useState<SessionStatus | null>(null)
+  
   const isMovingRef = useRef(false)
 
   const progressPercentage = Math.round((completedCount / totalQuestions) * 100)
 
+  const currentItem = wordsHistory[historyIndex] || null
+  const currentWord = currentItem ? currentItem.word : null
+  const status = globalStatus || (currentItem ? currentItem.status : "idle")
+  const lastUserInput = currentItem ? currentItem.lastUserInput : ""
+  const resultCorrectAnswer = currentItem ? currentItem.resultCorrectAnswer : ""
+  const jumbledLetters = currentItem ? currentItem.jumbledLetters : []
+  const placedLetters = currentItem ? currentItem.placedLetters : []
+  const isClose = currentItem ? currentItem.isClose : false
+  const diffCount = currentItem ? currentItem.diffCount : 0
+
+  const hasPrev = historyIndex > 0 && (
+    historyIndex < wordsHistory.length - 1 ||
+    status === "correct" ||
+    status === "typo" ||
+    status === "show_answer"
+  )
+
+  const handleError = useCallback((error: any) => {
+    if (error instanceof SessionConflictError) {
+      setIsConflict(true)
+    } else {
+      setGlobalStatus(null)
+      console.error("Session error occurred:", error);
+    }
+  }, [])
+
   // Fetch initial word and progress on mount
   useEffect(() => {
+    setGlobalStatus("validating")
     Promise.all([fetchNextWord(), getUserProgress()])
       .then(([word, progress]) => {
         if (word) {
-          setCurrentWord(word)
+          setWordsHistory([{
+            word,
+            status: "idle",
+            lastUserInput: "",
+            resultCorrectAnswer: "",
+            jumbledLetters: [],
+            placedLetters: [],
+            isClose: false,
+            diffCount: 0
+          }])
+          setHistoryIndex(0)
+          setGlobalStatus(null)
         } else {
-          setStatus("complete") // If backend buffer is empty
+          setGlobalStatus("complete")
         }
         
         if (progress) {
@@ -66,25 +114,29 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
           setTotalQuestions(progress.dailyGoal)
         }
       })
-      .catch(() => setStatus("complete"));
+      .catch((err) => {
+        if (err instanceof SessionConflictError) {
+          setIsConflict(true)
+        } else {
+          setGlobalStatus("complete")
+        }
+      });
   }, [deckId])
 
   const handleInputStart = useCallback(() => {
-    if (status === "incorrect") {
-      setStatus("idle")
-      setIsClose(false)
-      setDiffCount(0)
+    if (currentItem && currentItem.status === "incorrect") {
+      setWordsHistory(prev => {
+        const next = [...prev]
+        next[historyIndex] = {
+          ...next[historyIndex],
+          status: "idle",
+          isClose: false,
+          diffCount: 0
+        }
+        return next
+      })
     }
-  }, [status])
-
-  const resetCurrentWordState = useCallback(() => {
-    setJumbledLetters([])
-    setPlacedLetters([])
-    setIsClose(false)
-    setDiffCount(0)
-    setLastUserInput("")
-    setResultCorrectAnswer("")
-  }, [])
+  }, [currentItem, historyIndex])
 
   const moveToNext = useCallback(async () => {
     if (isMovingRef.current) return
@@ -96,29 +148,62 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     if (typeof document !== "undefined") {
       const inputEl = document.querySelector('input')
       if (inputEl) {
+        const originalReadOnly = inputEl.readOnly
+        inputEl.readOnly = false
         inputEl.focus({ preventScroll: true })
+        inputEl.readOnly = originalReadOnly
       }
+    }
+
+    if (historyIndex < wordsHistory.length - 1) {
+      setHistoryIndex(prev => prev + 1)
+      return
     }
 
     if (completedCount < totalQuestions) {
       isMovingRef.current = true
-      setCurrentIndex((prev) => prev + 1)
-      setStatus("validating")
+      setGlobalStatus("validating")
       
-      const nextWord = await fetchNextWord()
-      if (nextWord) {
-        setCurrentWord(nextWord)
-        resetCurrentWordState()
-        setStatus("idle")
-      } else {
-        // 백엔드에서 더 이상 가져올 문제가 없으면 완료
-        setStatus("complete")
+      try {
+        const nextWord = await fetchNextWord()
+        if (nextWord) {
+          setWordsHistory(prev => [
+            ...prev,
+            {
+              word: nextWord,
+              status: "idle",
+              lastUserInput: "",
+              resultCorrectAnswer: "",
+              jumbledLetters: [],
+              placedLetters: [],
+              isClose: false,
+              diffCount: 0
+            }
+          ])
+          setHistoryIndex(prev => prev + 1)
+          setGlobalStatus(null)
+        } else {
+          setGlobalStatus("complete")
+        }
+      } catch (err) {
+        handleError(err)
+      } finally {
+        isMovingRef.current = false
       }
-      isMovingRef.current = false
     } else {
-      setStatus("complete")
+      setGlobalStatus("complete")
     }
-  }, [completedCount, totalQuestions, resetCurrentWordState])
+  }, [historyIndex, wordsHistory.length, completedCount, totalQuestions, handleError])
+
+  const moveToPrev = useCallback(() => {
+    if (historyIndex > 0) {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel()
+      }
+      setHistoryIndex(prev => prev - 1)
+      setGlobalStatus(null)
+    }
+  }, [historyIndex])
 
   const playSpeech = useCallback((answerText: string) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -170,71 +255,89 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   }, [currentWord, resultCorrectAnswer, playSpeech])
 
   const submitAnswer = useCallback(async (answer: string) => {
-    if (!answer || status === "validating" || status === "correct" || status === "typo" || !currentWord) return
+    if (!answer || globalStatus === "validating" || (currentItem && (currentItem.status === "correct" || currentItem.status === "typo")) || !currentWord) return
 
-    setStatus("validating")
-    setLastUserInput(answer)
+    setGlobalStatus("validating")
+    
     try {
       const result = await verifyAnswer(currentWord.id, answer)
       
-      // 백엔드에서 실시간으로 계산된 풀은 개수와 목표 개수로 업데이트
       if (result.solvedCount !== undefined) setCompletedCount(result.solvedCount)
       if (result.targetCount !== undefined) setTotalQuestions(result.targetCount)
 
-      if (result.isCorrect) {
-        setIsClose(false)
-        setDiffCount(0)
-        if (result.isTypo) {
-          setStatus("typo")
-          setResultCorrectAnswer(result.correctAnswer || currentWord.answer)
-        } else {
-          setStatus("correct")
-        }
+      setWordsHistory(prev => {
+        const next = [...prev]
+        let newStatus: SessionStatus = "incorrect"
+        let corrAnswer = result.correctAnswer || currentWord.answer
         
+        if (result.isCorrect) {
+          newStatus = result.isTypo ? "typo" : "correct"
+        }
+
+        next[historyIndex] = {
+          ...next[historyIndex],
+          status: newStatus,
+          lastUserInput: answer,
+          resultCorrectAnswer: corrAnswer,
+          isClose: !result.isCorrect && !!result.isClose,
+          diffCount: !result.isCorrect ? (result.diffCount || 0) : 0
+        }
+        return next
+      })
+      
+      setGlobalStatus(null)
+
+      if (result.isCorrect) {
         const finalAnswer = result.correctAnswer || currentWord.answer
         playSpeech(finalAnswer)
-      } else {
-        setIsClose(!!result.isClose)
-        setDiffCount(result.diffCount || 0)
-        setStatus("incorrect")
       }
     } catch (error) {
-      console.error("Verification failed", error)
-      setStatus("idle") 
+      handleError(error)
     }
-  }, [currentWord, status, playSpeech])
+  }, [currentWord, globalStatus, currentItem, historyIndex, playSpeech, handleError])
 
   const showHint = useCallback(() => {
-    if (status === "incorrect" && currentWord) {
+    if (currentItem && currentItem.status === "incorrect" && currentWord) {
       const letters = currentWord.answer.split("").map((char, index) => ({
         id: `${char}-${index}-${Math.random().toString(36).substr(2, 9)}`,
         char
       }))
-      
-      // Shuffle letters
       const shuffled = [...letters].sort(() => Math.random() - 0.5)
       
-      setJumbledLetters(shuffled)
-      setPlacedLetters([])
-      setStatus("jumbled")
+      setWordsHistory(prev => {
+        const next = [...prev]
+        next[historyIndex] = {
+          ...next[historyIndex],
+          status: "jumbled",
+          jumbledLetters: shuffled,
+          placedLetters: []
+        }
+        return next
+      })
     }
-  }, [status, currentWord])
+  }, [currentItem, currentWord, historyIndex])
 
   const addPlacedLetter = useCallback((letter: JumbledLetter, index?: number) => {
-    if (status !== "jumbled" && status !== "jumbled_incorrect") return
+    if (!currentItem || (currentItem.status !== "jumbled" && currentItem.status !== "jumbled_incorrect")) return
     
     const update = () => {
-      setPlacedLetters(prev => {
-        if (prev.some(pl => pl.id === letter.id)) return prev
-        const result = [...prev]
+      setWordsHistory(prev => {
+        const next = [...prev]
+        const item = next[historyIndex]
+        if (item.placedLetters.some(pl => pl.id === letter.id)) return prev
+        const newPlaced = [...item.placedLetters]
         if (typeof index === "number") {
-          result.splice(index, 0, letter)
+          newPlaced.splice(index, 0, letter)
         } else {
-          result.push(letter)
+          newPlaced.push(letter)
         }
-        return result
+        next[historyIndex] = {
+          ...item,
+          placedLetters: newPlaced,
+          status: item.status === "jumbled_incorrect" ? "jumbled" : item.status
+        }
+        return next
       })
-      if (status === "jumbled_incorrect") setStatus("jumbled")
     }
 
     if (typeof document !== "undefined" && "startViewTransition" in document) {
@@ -246,14 +349,22 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     } else {
       update()
     }
-  }, [status])
+  }, [currentItem, historyIndex])
 
   const removePlacedLetter = useCallback((letter: JumbledLetter) => {
-    if (status !== "jumbled" && status !== "jumbled_incorrect") return
+    if (!currentItem || (currentItem.status !== "jumbled" && currentItem.status !== "jumbled_incorrect")) return
 
     const update = () => {
-      setPlacedLetters(prev => prev.filter(l => l.id !== letter.id))
-      if (status === "jumbled_incorrect") setStatus("jumbled")
+      setWordsHistory(prev => {
+        const next = [...prev]
+        const item = next[historyIndex]
+        next[historyIndex] = {
+          ...item,
+          placedLetters: item.placedLetters.filter(l => l.id !== letter.id),
+          status: item.status === "jumbled_incorrect" ? "jumbled" : item.status
+        }
+        return next
+      })
     }
 
     if (typeof document !== "undefined" && "startViewTransition" in document) {
@@ -265,22 +376,28 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     } else {
       update()
     }
-  }, [status])
+  }, [currentItem, historyIndex])
 
   const reorderPlacedLetter = useCallback((fromIndex: number, toIndex: number) => {
-    if (status !== "jumbled" && status !== "jumbled_incorrect") return
+    if (!currentItem || (currentItem.status !== "jumbled" && currentItem.status !== "jumbled_incorrect")) return
 
-    setPlacedLetters(prev => {
-      const result = [...prev]
-      const [removed] = result.splice(fromIndex, 1)
-      result.splice(toIndex, 0, removed)
-      return result
+    setWordsHistory(prev => {
+      const next = [...prev]
+      const item = next[historyIndex]
+      const newPlaced = [...item.placedLetters]
+      const [removed] = newPlaced.splice(fromIndex, 1)
+      newPlaced.splice(toIndex, 0, removed)
+      next[historyIndex] = {
+        ...item,
+        placedLetters: newPlaced,
+        status: item.status === "jumbled_incorrect" ? "jumbled" : item.status
+      }
+      return next
     })
-    if (status === "jumbled_incorrect") setStatus("jumbled")
-  }, [status])
+  }, [currentItem, historyIndex])
 
   const submitJumbledAnswer = useCallback(() => {
-    if ((status !== "jumbled" && status !== "jumbled_incorrect") || !currentWord) return
+    if (!currentItem || (currentItem.status !== "jumbled" && currentItem.status !== "jumbled_incorrect") || !currentWord) return
     
     const submittedAnswer = placedLetters.map(l => l.char).join("")
     if (submittedAnswer === currentWord.answer) {
@@ -290,33 +407,52 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
           inputEl.focus({ preventScroll: true })
         }
       }
-      setStatus("correct")
+      setWordsHistory(prev => {
+        const next = [...prev]
+        next[historyIndex] = {
+          ...next[historyIndex],
+          status: "correct"
+        }
+        return next
+      })
       playSpeech(currentWord.answer)
     } else {
-      setStatus("jumbled_incorrect")
+      setWordsHistory(prev => {
+        const next = [...prev]
+        next[historyIndex] = {
+          ...next[historyIndex],
+          status: "jumbled_incorrect"
+        }
+        return next
+      })
     }
-  }, [status, currentWord, placedLetters, playSpeech])
+  }, [currentItem, currentWord, placedLetters, historyIndex, playSpeech])
 
   const showFinalAnswer = useCallback(() => {
-    if (status === "jumbled_incorrect" && currentWord) {
-      setStatus("show_answer")
+    if (currentItem && currentItem.status === "jumbled_incorrect" && currentWord) {
+      setWordsHistory(prev => {
+        const next = [...prev]
+        next[historyIndex] = {
+          ...next[historyIndex],
+          status: "show_answer"
+        }
+        return next
+      })
       playSpeech(currentWord.answer)
     }
-  }, [status, currentWord, playSpeech])
+  }, [currentItem, currentWord, historyIndex, playSpeech])
 
   const resetSession = useCallback(async () => {
     const nextGoal = Math.max(completedCount, totalQuestions) + 10
     
-    // Update local state and localStorage synchronously for instant UI feedback
     setTotalQuestions(nextGoal)
     if (typeof window !== "undefined") {
       localStorage.setItem("wordflow-daily-goal", nextGoal.toString())
     }
 
-    setCurrentIndex(0)
-    setStatus("idle")
-    setCurrentWord(null)
-    resetCurrentWordState()
+    setWordsHistory([])
+    setHistoryIndex(0)
+    setGlobalStatus("validating")
     
     try {
       await startSession(deckId, nextGoal)
@@ -324,9 +460,20 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       const [word, progress] = await Promise.all([fetchNextWord(), getUserProgress()])
       
       if (word) {
-        setCurrentWord(word)
+        setWordsHistory([{
+          word,
+          status: "idle",
+          lastUserInput: "",
+          resultCorrectAnswer: "",
+          jumbledLetters: [],
+          placedLetters: [],
+          isClose: false,
+          diffCount: 0
+        }])
+        setHistoryIndex(0)
+        setGlobalStatus(null)
       } else {
-        setStatus("complete")
+        setGlobalStatus("complete")
       }
       
       if (progress) {
@@ -334,13 +481,12 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
         setTotalQuestions(progress.dailyGoal)
       }
     } catch (error) {
-      console.error("Failed to reset session with 10 more questions:", error)
-      setStatus("complete")
+      handleError(error)
     }
-  }, [deckId, completedCount, totalQuestions, resetCurrentWordState])
+  }, [deckId, completedCount, totalQuestions, handleError])
 
   return {
-    currentIndex,
+    currentIndex: historyIndex,
     currentWord,
     status,
     completedCount,
@@ -352,6 +498,8 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     placedLetters,
     isClose,
     diffCount,
+    isConflict,
+    hasPrev,
     handleInputStart,
     submitAnswer,
     showHint,
@@ -361,6 +509,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     submitJumbledAnswer,
     showFinalAnswer,
     moveToNext,
+    moveToPrev,
     resetSession,
     replaySpeech,
   }

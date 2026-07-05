@@ -1,5 +1,33 @@
 // lib/api.ts
 
+export class SessionConflictError extends Error {
+  constructor(message = "Session conflict detected") {
+    super(message);
+    this.name = "SessionConflictError";
+  }
+}
+
+export function getSessionToken(): string {
+  if (typeof window !== "undefined") {
+    let sessionToken = sessionStorage.getItem("wordflow-study-session");
+    if (!sessionToken) {
+      sessionToken = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      sessionStorage.setItem("wordflow-study-session", sessionToken);
+    }
+    return sessionToken;
+  }
+  return "";
+}
+
+export function resetSessionToken(): string {
+  if (typeof window !== "undefined") {
+    const sessionToken = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    sessionStorage.setItem("wordflow-study-session", sessionToken);
+    return sessionToken;
+  }
+  return "";
+}
+
 export interface WordItem {
   id: string
   korean: string
@@ -118,12 +146,18 @@ function addRefreshSubscriber(callback: (token: string) => void) {
  */
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = getAuthToken();
+  const sessionToken = getSessionToken();
   const headers = {
     ...options.headers,
     ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    ...(sessionToken ? { "X-Session-Token": sessionToken } : {}),
   } as Record<string, string>;
 
   const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 409) {
+    throw new SessionConflictError();
+  }
 
   // If unauthorized, try to refresh the token
   if (res.status === 401) {

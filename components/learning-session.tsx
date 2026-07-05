@@ -26,6 +26,13 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
   const session = useLearningSession(deckId, totalQuestions)
   const { setTheme, resolvedTheme, mounted } = useUserTheme()
 
+  useEffect(() => {
+    if (session.isConflict) {
+      alert("다른 기기 또는 탭에서 새로운 학습 세션이 시작되었습니다. 현재 세션은 종료됩니다.")
+      router.push("/")
+    }
+  }, [session.isConflict, router])
+
   const [isKeyboardActive, setIsKeyboardActive] = useState(false)
   const [isVirtualKeyboardEnabled, setIsVirtualKeyboardEnabled] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -137,6 +144,10 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
         
         input.focus({ preventScroll: true })
         input.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    } else if (key.toLowerCase() === "b" && (session.status === "correct" || session.status === "typo" || session.status === "show_answer")) {
+      if (session.hasPrev) {
+        session.moveToPrev()
       }
     } else if (key.toLowerCase() === "r" && (session.status === "correct" || session.status === "typo" || session.status === "show_answer")) {
       session.replaySpeech()
@@ -496,6 +507,13 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
 
   // Global Shortcuts
   useKeyboardShortcut("Escape", () => router.push("/"))
+  useKeyboardShortcut("b", () => {
+    if (session.status === "correct" || session.status === "typo" || session.status === "show_answer") {
+      if (session.hasPrev) {
+        session.moveToPrev()
+      }
+    }
+  })
   useKeyboardShortcut("Enter", () => {
     if (session.status === "complete") {
       session.resetSession()
@@ -619,6 +637,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 onSubmit={session.submitAnswer}
                 onHintRequest={session.showHint}
                 onSkip={session.moveToNext}
+                lastUserInput={session.lastUserInput}
+                resultCorrectAnswer={session.resultCorrectAnswer}
                 placedLetters={session.placedLetters}
                 onRemoveLetter={session.removePlacedLetter}
                 onReorderLetter={session.reorderPlacedLetter}
@@ -649,6 +669,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 currentWord={session.currentWord} 
                 onShowHint={session.showHint} 
                 onNext={session.moveToNext} 
+                hasPrev={session.hasPrev}
+                onPrev={session.moveToPrev}
                 lastUserInput={session.lastUserInput}
                 resultCorrectAnswer={session.resultCorrectAnswer}
                 isClose={session.isClose}

@@ -176,6 +176,45 @@ function TypoDiff({ user, correct }: { user: string; correct: string }) {
  * | **모바일** | **힌트 틀림 (Jumbled/Incorrect)** | 키보드 비활성화 (가상 키보드 닫힘) |
  * | **모바일** | **최종 정답 확인 (Show Answer)** | 키보드 비활성화 (가상 키보드 닫힘) |
  */
+interface FeedbackActionButtonProps extends React.ComponentPropsWithoutRef<typeof Button> {
+  label: string
+  shortcut?: "b" | "r" | "enter"
+  icon?: React.ReactNode
+  isMobileDevice: boolean
+}
+
+function FeedbackActionButton({
+  label,
+  shortcut,
+  icon,
+  isMobileDevice,
+  className,
+  ...props
+}: FeedbackActionButtonProps) {
+  return (
+    <Button className={cn("gap-1.5", className)} {...props}>
+      {icon}
+      <span>
+        {label}
+        {shortcut && (
+          <>
+            {" "}
+            {shortcut === "b" && "(B)"}
+            {shortcut === "r" && "(R)"}
+            {shortcut === "enter" && (
+              <span className="inline-flex items-center align-middle">
+                (
+                <CornerDownLeft className="inline size-3 mx-0.5" />
+                )
+              </span>
+            )}
+          </>
+        )}
+      </span>
+    </Button>
+  )
+}
+
 export function SessionFeedback({ 
   isVirtualKeyboardEnabled,
   onToggleVirtualKeyboard,
@@ -224,22 +263,37 @@ export function SessionFeedback({
 
   if (status === "correct") {
     return (
-      <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-2 mt-2">
+      <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200 w-full">
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
           {hasPrev && onPrev && (
-            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
-              <ArrowLeft className="size-3.5" />
-              <span>Prev Word (B)</span>
-            </Button>
+            <FeedbackActionButton
+              size="lg"
+              onClick={onPrev}
+              variant="outline"
+              label="Prev Word"
+              shortcut="b"
+              icon={<ArrowLeft className="size-3.5" />}
+              isMobileDevice={isMobileDevice}
+            />
           )}
-          <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
-            <Volume2 className="size-4" />
-            Listen (R)
-          </Button>
-          <Button size="lg" onClick={onNext} className="gap-1.5" variant="default">
-            <ArrowRight className="size-3.5" />
-            <span>Next Word (<CornerDownLeft className="inline size-3" />)</span>
-          </Button>
+          <FeedbackActionButton
+            size="lg"
+            onClick={onReplay}
+            variant="default"
+            label="Listen"
+            shortcut="r"
+            icon={<Volume2 className="size-4" />}
+            isMobileDevice={isMobileDevice}
+          />
+          <FeedbackActionButton
+            size="lg"
+            onClick={onNext}
+            variant="default"
+            label="Next Word"
+            shortcut="enter"
+            icon={<ArrowRight className="size-3.5" />}
+            isMobileDevice={isMobileDevice}
+          />
           {renderVirtualKeyboardToggle()}
         </div>
       </div>
@@ -248,7 +302,7 @@ export function SessionFeedback({
 
   if (status === "typo") {
     return (
-      <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200 w-full">
         <div className="flex items-center gap-2 text-warning">
           <AlertCircle className="size-4" />
           <span className="font-semibold text-sm">Typo!</span>
@@ -256,21 +310,36 @@ export function SessionFeedback({
         {lastUserInput && resultCorrectAnswer && (
           <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
         )}
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
           {hasPrev && onPrev && (
-            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
-              <ArrowLeft className="size-3.5" />
-              <span>Prev Word (B)</span>
-            </Button>
+            <FeedbackActionButton
+              size="lg"
+              onClick={onPrev}
+              variant="outline"
+              label="Prev Word"
+              shortcut="b"
+              icon={<ArrowLeft className="size-3.5" />}
+              isMobileDevice={isMobileDevice}
+            />
           )}
-          <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
-            <Volume2 className="size-4" />
-            Listen (R)
-          </Button>
-          <Button size="lg" onClick={onNext} className="gap-1.5" variant="default">
-            <ArrowRight className="size-3.5" />
-            <span>Next Word (<CornerDownLeft className="inline size-3" />)</span>
-          </Button>
+          <FeedbackActionButton
+            size="lg"
+            onClick={onReplay}
+            variant="default"
+            label="Listen"
+            shortcut="r"
+            icon={<Volume2 className="size-4" />}
+            isMobileDevice={isMobileDevice}
+          />
+          <FeedbackActionButton
+            size="lg"
+            onClick={onNext}
+            variant="default"
+            label="Next Word"
+            shortcut="enter"
+            icon={<ArrowRight className="size-3.5" />}
+            isMobileDevice={isMobileDevice}
+          />
           {renderVirtualKeyboardToggle()}
         </div>
       </div>
@@ -279,7 +348,7 @@ export function SessionFeedback({
 
   if (status === "incorrect") {
     return (
-      <div className="flex flex-col items-center gap-2 animate-in fade-in duration-200">
+      <div className="flex flex-col items-center gap-2 animate-in fade-in duration-200 w-full">
         {isClose && (
           <div className="flex flex-col items-center gap-1 mb-2 animate-in fade-in duration-200">
             <div className="flex items-center gap-2 text-warning">
@@ -291,17 +360,27 @@ export function SessionFeedback({
             </span>
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           {hasPrev && onPrev && (
-            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
-              <ArrowLeft className="size-3.5" />
-              <span>Prev Word (B)</span>
-            </Button>
+            <FeedbackActionButton
+              size="lg"
+              onClick={onPrev}
+              variant="outline"
+              label="Prev Word"
+              shortcut="b"
+              icon={<ArrowLeft className="size-3.5" />}
+              isMobileDevice={isMobileDevice}
+            />
           )}
-          <Button variant="default" size="lg" onClick={onShowHint} className="gap-2">
-            <Eye className="size-4" />
-            <span>Show Hint (<CornerDownLeft className="inline size-3" />)</span>
-          </Button>
+          <FeedbackActionButton
+            variant="default"
+            size="lg"
+            onClick={onShowHint}
+            label="Show Hint"
+            shortcut="enter"
+            icon={<Eye className="size-4" />}
+            isMobileDevice={isMobileDevice}
+          />
           {renderVirtualKeyboardToggle()}
         </div>
       </div>
@@ -348,25 +427,28 @@ export function SessionFeedback({
           })}
         </div>
         
-        <div className="flex flex-col items-center gap-2">
-          {status === "jumbled_incorrect" ? (
-            <Button variant="destructive" size="lg" onClick={onShowFinalAnswer} className="gap-2">
-              <Eye className="size-4" />
-              {isMobileDevice ? "Show Answer" : <span>Show Answer (<CornerDownLeft className="inline size-3" />)</span>}
-            </Button>
-          ) : (
-            <Button 
-              size="lg" 
-              onClick={onSubmitJumbled} 
-              className="gap-2"
+        <div className="flex flex-col items-center gap-2 w-full">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <FeedbackActionButton
+              size="lg"
+              onClick={onSubmitJumbled}
               disabled={placedLetters.length !== jumbledLetters.length}
-            >
-              <Send className="size-4" />
-              {isMobileDevice ? "Submit" : <span>Submit (<CornerDownLeft className="inline size-3" />)</span>}
-            </Button>
-          )}
+              label="Submit"
+              shortcut="enter"
+              icon={<Send className="size-4" />}
+              isMobileDevice={isMobileDevice}
+            />
+            <FeedbackActionButton
+              variant="destructive"
+              size="lg"
+              onClick={onShowFinalAnswer}
+              label="Show Answer"
+              icon={<Eye className="size-4" />}
+              isMobileDevice={isMobileDevice}
+            />
+          </div>
           <p className="text-[10px] text-muted-foreground/50">
-            {status === "jumbled_incorrect" ? "Order is incorrect. Try again or show answer." : "Arrange all letters to submit"}
+            {status === "jumbled_incorrect" ? "Order is incorrect. Try again or show answer." : "Arrange all letters to submit, or show answer directly"}
           </p>
         </div>
       </div>
@@ -375,26 +457,41 @@ export function SessionFeedback({
 
   if (status === "show_answer") {
     return (
-      <div className="flex flex-col items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200">
+      <div className="flex flex-col items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200 w-full">
         <p className="text-sm text-muted-foreground">
           {"The answer is: "}
           <strong className="text-foreground font-semibold tracking-wide">{currentWord.answer}</strong>
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           {hasPrev && onPrev && (
-            <Button size="lg" onClick={onPrev} className="gap-1.5" variant="outline">
-              <ArrowLeft className="size-3.5" />
-              <span>Prev Word (B)</span>
-            </Button>
+            <FeedbackActionButton
+              size="lg"
+              onClick={onPrev}
+              variant="outline"
+              label="Prev Word"
+              shortcut="b"
+              icon={<ArrowLeft className="size-3.5" />}
+              isMobileDevice={isMobileDevice}
+            />
           )}
-          <Button size="lg" onClick={onReplay} className="gap-1.5" variant="default">
-            <Volume2 className="size-4" />
-            Listen (R)
-          </Button>
-          <Button size="lg" onClick={onNext} className="gap-1.5" variant="default">
-            <ArrowRight className="size-3.5" />
-            {isMobileDevice ? "Next Word" : <span>Next Word (<CornerDownLeft className="inline size-3" />)</span>}
-          </Button>
+          <FeedbackActionButton
+            size="lg"
+            onClick={onReplay}
+            variant="default"
+            label="Listen"
+            shortcut="r"
+            icon={<Volume2 className="size-4" />}
+            isMobileDevice={isMobileDevice}
+          />
+          <FeedbackActionButton
+            size="lg"
+            onClick={onNext}
+            variant="default"
+            label="Next Word"
+            shortcut="enter"
+            icon={<ArrowRight className="size-3.5" />}
+            isMobileDevice={isMobileDevice}
+          />
           {renderVirtualKeyboardToggle()}
         </div>
       </div>
@@ -402,17 +499,17 @@ export function SessionFeedback({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center gap-2">
-        <Button 
-          size="lg" 
-          onClick={onSubmit} 
+    <div className="flex flex-col items-center gap-2 w-full">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <FeedbackActionButton
+          size="lg"
+          onClick={onSubmit}
           disabled={status === "validating"}
-          className="gap-2"
-        >
-          <Send className="size-4" />
-          <span>Submit (<CornerDownLeft className="inline size-3" />)</span>
-        </Button>
+          label="Submit"
+          shortcut="enter"
+          icon={<Send className="size-4" />}
+          isMobileDevice={isMobileDevice}
+        />
         {renderVirtualKeyboardToggle()}
       </div>
     </div>

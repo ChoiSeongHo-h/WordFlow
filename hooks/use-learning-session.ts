@@ -429,7 +429,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
   }, [currentItem, currentWord, placedLetters, historyIndex, playSpeech])
 
   const showFinalAnswer = useCallback(() => {
-    if (currentItem && currentItem.status === "jumbled_incorrect" && currentWord) {
+    if (currentItem && (currentItem.status === "jumbled" || currentItem.status === "jumbled_incorrect") && currentWord) {
       setWordsHistory(prev => {
         const next = [...prev]
         next[historyIndex] = {

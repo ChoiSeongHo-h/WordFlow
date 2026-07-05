@@ -577,7 +577,6 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden text-sm text-muted-foreground sm:inline">{deckTitle}</span>
           <Button 
             variant="ghost" 
             size="icon" 

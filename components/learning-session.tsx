@@ -49,7 +49,11 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
     const input = inputRef.current
     if (!input) return
 
-    const isReadOnly = session.status === "correct" || session.status === "typo" || session.status === "validating"
+    const isReadOnly =
+      session.status === "correct" ||
+      session.status === "typo" ||
+      session.status === "validating" ||
+      session.status === "show_answer"
 
     if (key === "Enter") {
       if (session.status === "complete") {
@@ -134,6 +138,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
         input.focus({ preventScroll: true })
         input.setSelectionRange(newCursorPos, newCursorPos)
       }
+    } else if (key.toLowerCase() === "r" && (session.status === "correct" || session.status === "typo" || session.status === "show_answer")) {
+      session.replaySpeech()
     } else {
       if (!isReadOnly) {
         const char = key.toLowerCase()

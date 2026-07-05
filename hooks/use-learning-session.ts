@@ -77,6 +77,15 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     }
   }, [status])
 
+  const resetCurrentWordState = useCallback(() => {
+    setJumbledLetters([])
+    setPlacedLetters([])
+    setIsClose(false)
+    setDiffCount(0)
+    setLastUserInput("")
+    setResultCorrectAnswer("")
+  }, [])
+
   const moveToNext = useCallback(async () => {
     if (isMovingRef.current) return
 
@@ -99,10 +108,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       const nextWord = await fetchNextWord()
       if (nextWord) {
         setCurrentWord(nextWord)
-        setJumbledLetters([])
-        setPlacedLetters([])
-        setIsClose(false)
-        setDiffCount(0)
+        resetCurrentWordState()
         setStatus("idle")
       } else {
         // 백엔드에서 더 이상 가져올 문제가 없으면 완료
@@ -112,7 +118,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     } else {
       setStatus("complete")
     }
-  }, [completedCount, totalQuestions])
+  }, [completedCount, totalQuestions, resetCurrentWordState])
 
   const playSpeech = useCallback((answerText: string) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -310,10 +316,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
     setCurrentIndex(0)
     setStatus("idle")
     setCurrentWord(null)
-    setJumbledLetters([])
-    setPlacedLetters([])
-    setIsClose(false)
-    setDiffCount(0)
+    resetCurrentWordState()
     
     try {
       await startSession(deckId, nextGoal)
@@ -334,7 +337,7 @@ export function useLearningSession(deckId: string, initialTotalQuestions: number
       console.error("Failed to reset session with 10 more questions:", error)
       setStatus("complete")
     }
-  }, [deckId, completedCount, totalQuestions])
+  }, [deckId, completedCount, totalQuestions, resetCurrentWordState])
 
   return {
     currentIndex,

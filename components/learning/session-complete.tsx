@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 interface SessionCompleteProps {
   completedCount: number
@@ -16,13 +17,14 @@ interface SessionCompleteProps {
 export function SessionComplete({ completedCount, totalWords, onDashboard, onRetry }: SessionCompleteProps) {
   const [mounted, setMounted] = useState(false)
   const isMobile = useIsMobile()
+  const { t } = useTranslation()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const dashboardLabel = mounted && !isMobile ? "Dashboard (ESC)" : "Dashboard"
-  const retryLabel = mounted && !isMobile ? "Practice 10 More (Enter)" : "Practice 10 More"
+  const dashboardLabel = mounted && !isMobile ? t("dashboardLabelWithEsc") : t("dashboardLabel")
+  const retryLabel = mounted && !isMobile ? t("practiceMoreWithEnter") : t("practiceMore")
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 animate-in fade-in duration-700">
@@ -32,10 +34,10 @@ export function SessionComplete({ completedCount, totalWords, onDashboard, onRet
         </div>
         <div>
           <h2 className="text-4xl font-semibold tracking-tight text-foreground font-[family-name:var(--font-heading)]">
-            Session Complete
+            {t("sessionComplete")}
           </h2>
           <p className="mt-2 text-lg text-muted-foreground">
-            You mastered {completedCount} out of {totalWords} words!
+            {t("masteredWordsDesc").replace("{completed}", String(completedCount)).replace("{total}", String(totalWords))}
           </p>
         </div>
         <div className="flex gap-3">

@@ -9,12 +9,14 @@ import { AchievementCard } from "@/components/dashboard/achievement-card"
 import { Calendar } from "@/components/ui/calendar"
 import { getUserProgress, getMonthlyStreak, type UserProgress } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 const LOCAL_STORAGE_KEY = "wordflow-daily-goal"
 const DEFAULT_GOAL = 20
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [userProgress, setUserProgress] = React.useState<UserProgress | null>(null)
   const [activeDates, setActiveDates] = React.useState<Date[]>([])
   const [dailyGoal, setDailyGoal] = React.useState<number>(DEFAULT_GOAL)
@@ -63,7 +65,7 @@ export default function DashboardPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="size-10 animate-spin text-primary/80" />
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading your flow...</p>
+          <p className="text-sm font-medium text-muted-foreground animate-pulse">{t("loadingFlow")}</p>
         </div>
       </div>
     )
@@ -110,13 +112,13 @@ export default function DashboardPage() {
           <Card className="border-border/30 shadow-sm bg-card/40 hover:bg-card/60 transition-colors backdrop-blur-sm">
             <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">Flow History</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70">{t("flowHistory")}</p>
                 <div className="mt-4 flex items-baseline gap-2">
                   <Flame className="size-8 text-orange-500 fill-orange-500 animate-pulse" style={{ animationDuration: '3s' }} />
                   <span className="text-5xl font-black text-foreground font-[family-name:var(--font-heading)] tracking-tighter">
                     {userProgress.streak}
                   </span>
-                  <span className="text-sm font-medium text-muted-foreground">days</span>
+                  <span className="text-sm font-medium text-muted-foreground">{t("days")}</span>
                 </div>
               </div>
               
@@ -136,7 +138,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <TrendingUp className="size-3.5 text-orange-500" />
-                    Personal Best: {userProgress.maxStreak}
+                    {t("personalBest")}: {userProgress.maxStreak}
                   </span>
                 </div>
               </div>
@@ -150,7 +152,7 @@ export default function DashboardPage() {
                 <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
                   <BookOpen className="size-4" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">Words Learned</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("wordsLearned")}</p>
               </div>
               <p className="text-3xl font-bold text-foreground font-[family-name:var(--font-heading)]">
                 {userProgress.totalWordsLearned.toLocaleString()}
@@ -175,15 +177,15 @@ export default function DashboardPage() {
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                   <BarChart3 className="size-4" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">Avg. Accuracy</p>
+                <p className="text-sm font-medium text-muted-foreground">{t("avgAccuracy")}</p>
               </div>
               <p className="text-3xl font-bold text-foreground font-[family-name:var(--font-heading)]">
                 {Math.round(userProgress.avgAccuracy)}%
               </p>
               <p className="mt-1 text-xs font-medium text-muted-foreground italic">
-                {userProgress.avgAccuracy >= 90 ? "Excellent accuracy!" : 
-                 userProgress.avgAccuracy >= 70 ? "Great job, keep it up!" :
-                 userProgress.avgAccuracy > 0 ? "Keep practicing to improve!" : "Start your first lesson!"}
+                {userProgress.avgAccuracy >= 90 ? t("accuracyExcellent") : 
+                 userProgress.avgAccuracy >= 70 ? t("accuracyGood") :
+                 userProgress.avgAccuracy > 0 ? t("accuracyPractice") : t("accuracyStart")}
               </p>
               </CardContent>
               </Card>

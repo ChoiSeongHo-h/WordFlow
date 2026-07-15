@@ -1,8 +1,10 @@
 "use client"
 
 import { Zap } from "lucide-react"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 export function AuthBranding() {
+  const { t } = useTranslation()
   return (
     <div className="hidden lg:flex lg:flex-1 flex-col justify-between bg-primary p-10 text-primary-foreground">
       {/* Logo */}
@@ -20,7 +22,7 @@ export function AuthBranding() {
         {/* Sentence typing preview */}
         <div className="rounded-xl bg-primary-foreground/10 p-6 backdrop-blur-sm">
           <p className="text-xs uppercase tracking-wider text-primary-foreground/60 mb-4">
-            Learn words in real sentences
+            {t("brandingTagline")}
           </p>
           <div className="flex flex-col gap-4">
             <p className="text-sm text-primary-foreground/70 leading-relaxed">
@@ -42,15 +44,15 @@ export function AuthBranding() {
         <div className="flex gap-4">
           <div className="flex-1 rounded-lg bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <p className="text-2xl font-bold font-[family-name:var(--font-heading)]">87%</p>
-            <p className="text-xs text-primary-foreground/60 mt-1">Accuracy</p>
+            <p className="text-xs text-primary-foreground/60 mt-1">{t("accuracy")}</p>
           </div>
           <div className="flex-1 rounded-lg bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <p className="text-2xl font-bold font-[family-name:var(--font-heading)]">14</p>
-            <p className="text-xs text-primary-foreground/60 mt-1">Day Streak</p>
+            <p className="text-xs text-primary-foreground/60 mt-1">{t("dayStreak")}</p>
           </div>
           <div className="flex-1 rounded-lg bg-primary-foreground/10 p-4 backdrop-blur-sm">
             <p className="text-2xl font-bold font-[family-name:var(--font-heading)]">240+</p>
-            <p className="text-xs text-primary-foreground/60 mt-1">Words</p>
+            <p className="text-xs text-primary-foreground/60 mt-1">{t("wordsLabel")}</p>
           </div>
         </div>
       </div>
@@ -58,10 +60,10 @@ export function AuthBranding() {
       {/* Testimonial */}
       <div>
         <blockquote className="text-sm leading-relaxed text-primary-foreground/80">
-          {"\"Typing words directly into sentences completely changed how I learn English. It feels natural, like real practice.\""}
+          {t("testimonial")}
         </blockquote>
         <p className="mt-3 text-xs text-primary-foreground/50">
-          A WordFlow learner
+          {t("testimonialAuthor")}
         </p>
       </div>
     </div>

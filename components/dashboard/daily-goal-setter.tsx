@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 interface DailyGoalSetterProps {
   goal: number
@@ -15,6 +16,7 @@ interface DailyGoalSetterProps {
 }
 
 export function DailyGoalSetter({ goal, onGoalChange, completedWords = 0, className }: DailyGoalSetterProps) {
+  const { t } = useTranslation()
   // Fixed minimum allowed goal
   const minAllowedGoal = 5
 
@@ -29,10 +31,10 @@ export function DailyGoalSetter({ goal, onGoalChange, completedWords = 0, classN
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Settings2 className="size-4 text-muted-foreground" />
-          <Label className="text-sm font-medium text-foreground">Set Daily Goal</Label>
+          <Label className="text-sm font-medium text-foreground">{t("setDailyGoal")}</Label>
         </div>
         <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
-          {goal} words
+          {goal} {t("words")}
         </span>
       </div>
 

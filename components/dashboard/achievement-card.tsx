@@ -9,6 +9,7 @@ import { CircularProgress } from "@/components/circular-progress"
 import { DailyGoalSetter } from "./daily-goal-setter"
 import { startSession } from "@/lib/api"
 import { toast } from "sonner"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 interface AchievementCardProps {
   dailyCompleted: number
@@ -22,6 +23,7 @@ export function AchievementCard({
   onGoalChange,
 }: AchievementCardProps) {
   const router = useRouter()
+  const { t } = useTranslation()
   const [isStarting, setIsStarting] = React.useState(false)
 
   const handleStartNow = async () => {
@@ -33,7 +35,7 @@ export function AchievementCard({
       router.push(`/learn/${deckId}?q=${dailyGoal}`)
     } catch (error: any) {
       console.error("Failed to start session:", error)
-      toast.error(error.message || "Failed to start learning session. Please try again.")
+      toast.error(error.message || t("failedToStartSession"))
       setIsStarting(false)
     }
   }
@@ -58,12 +60,12 @@ export function AchievementCard({
           <div className="flex flex-1 flex-col gap-6 w-full">
             <div className="space-y-2 text-center lg:text-left">
               <h2 className="text-3xl font-bold tracking-tight text-foreground font-[family-name:var(--font-heading)]">
-                Daily Progress
+                {t("dailyProgress")}
               </h2>
               <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
                 {dailyCompleted >= dailyGoal
-                  ? "Incredible! You've reached your daily target. Feel free to set a higher goal or keep practicing."
-                  : "You're doing great! Keep the momentum going to maintain your streak and master new vocabulary."}
+                  ? t("dailyTargetReached")
+                  : t("dailyTargetPending")}
               </p>
             </div>
 
@@ -86,11 +88,11 @@ export function AchievementCard({
                 {isStarting ? (
                   <>
                     <Loader2 className="size-5 animate-spin" />
-                    Preparing...
+                    {t("preparing")}
                   </>
                 ) : (
                   <>
-                    Start Learning Now
+                    {t("startLearningNow")}
                     <ArrowRight className="size-5" />
                   </>
                 )}

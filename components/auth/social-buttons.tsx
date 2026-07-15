@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -46,6 +47,7 @@ interface SocialButtonsProps {
 }
 
 export function SocialButtons({ disabled }: SocialButtonsProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-3">
       <Button
@@ -55,7 +57,7 @@ export function SocialButtons({ disabled }: SocialButtonsProps) {
         type="button"
       >
         <GoogleIcon className="size-5" />
-        Continue with Google
+        {t("continueWithGoogle")}
       </Button>
       <div className="flex gap-3">
         <Button
@@ -65,7 +67,7 @@ export function SocialButtons({ disabled }: SocialButtonsProps) {
           type="button"
         >
           <AppleIcon className="size-5" />
-          Apple
+          {t("apple")}
         </Button>
         <Button
           variant="outline"
@@ -74,7 +76,7 @@ export function SocialButtons({ disabled }: SocialButtonsProps) {
           type="button"
         >
           <GithubIcon className="size-5" />
-          GitHub
+          {t("githubLabel")}
         </Button>
       </div>
     </div>

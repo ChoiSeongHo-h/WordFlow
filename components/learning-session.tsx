@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut"
 import { useUserTheme } from "@/hooks/use-user-theme"
 import { useLearningSession, type JumbledLetter } from "@/hooks/use-learning-session"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 import { SentenceInput } from "@/components/learning/sentence-input"
 import { SessionFeedback } from "@/components/learning/session-feedback" 
 import { SessionComplete } from "@/components/learning/session-complete"
@@ -39,6 +40,7 @@ interface LearningSessionProps {
 
 export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningSessionProps) {
   const router = useRouter()
+  const { t } = useTranslation()
   const session = useLearningSession(deckId, totalQuestions)
   const { setTheme, theme, resolvedTheme, mounted, userEmail } = useUserTheme()
   const [keyboardHeight, setKeyboardHeight] = useState(200)
@@ -59,10 +61,10 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
 
   useEffect(() => {
     if (session.isConflict) {
-      alert("다른 기기 또는 탭에서 새로운 학습 세션이 시작되었습니다. 현재 세션은 종료됩니다.")
+      alert(t("conflictAlert"))
       router.push("/")
     }
-  }, [session.isConflict, router])
+  }, [session.isConflict, router, t])
 
   const [isKeyboardActive, setIsKeyboardActive] = useState(false)
   const [isVirtualKeyboardEnabled, setIsVirtualKeyboardEnabled] = useState(false)
@@ -621,23 +623,23 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Session Settings</DialogTitle>
+                <DialogTitle>{t("sessionSettings")}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-6 py-4">
                 {/* 1. Theme Settings */}
                 <div className="space-y-2">
-                  <Label htmlFor="session-theme-select">App Theme</Label>
+                  <Label htmlFor="session-theme-select">{t("appTheme")}</Label>
                   <Select
                     value={mounted ? theme : "system"}
                     onValueChange={(val) => setTheme(val)}
                   >
                     <SelectTrigger id="session-theme-select" className="w-full bg-background/50">
-                      <SelectValue placeholder="Select theme" />
+                      <SelectValue placeholder={t("selectTheme")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">Light Mode</SelectItem>
-                      <SelectItem value="dark">Dark Mode</SelectItem>
-                      <SelectItem value="system">System Default</SelectItem>
+                      <SelectItem value="light">{t("lightMode")}</SelectItem>
+                      <SelectItem value="dark">{t("darkMode")}</SelectItem>
+                      <SelectItem value="system">{t("systemDefault")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -645,8 +647,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 {/* 2. TTS Voice Speed Settings */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="session-voice-speed">Voice Speed ({voiceSpeed.toFixed(1)}x)</Label>
-                    <span className="text-xs text-muted-foreground">0.5x (Slow) - 2.0x (Fast)</span>
+                    <Label htmlFor="session-voice-speed">{t("voiceSpeedVal").replace("{speed}", voiceSpeed.toFixed(1))}</Label>
+                    <span className="text-xs text-muted-foreground">0.5x ({t("slow")}) - 2.0x ({t("fast")})</span>
                   </div>
                   <div className="pt-1">
                     <Slider
@@ -667,8 +669,8 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
                 {/* 3. Keyboard Height Settings */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="session-keyboard-height">Keyboard Height ({keyboardHeight}px)</Label>
-                    <span className="text-xs text-muted-foreground">160px (Small) - 300px (Large)</span>
+                    <Label htmlFor="session-keyboard-height">{t("keyboardHeightVal").replace("{height}", String(keyboardHeight))}</Label>
+                    <span className="text-xs text-muted-foreground">{t("keyboardHeightLimits")}</span>
                   </div>
                   <div className="pt-1">
                     <Slider

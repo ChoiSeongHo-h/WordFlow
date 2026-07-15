@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import type { WordItem } from "@/lib/api"
 import type { SessionStatus, JumbledLetter } from "@/hooks/use-learning-session"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useTranslation } from "@/lib/contexts/LanguageContext"
 
 interface SessionFeedbackProps {
   isVirtualKeyboardEnabled: boolean
@@ -241,6 +242,7 @@ export function SessionFeedback({
   activeKeyLetterIds,
   onReplay
 }: SessionFeedbackProps) {
+  const { t } = useTranslation()
   const [isMounted, setIsMounted] = useState(false)
   const isMobile = useIsMobile()
 
@@ -270,7 +272,7 @@ export function SessionFeedback({
               size="lg"
               onClick={onPrev}
               variant="outline"
-              label="Prev Word"
+              label={t("prevWord")}
               shortcut="b"
               icon={<ArrowLeft className="size-3.5" />}
               isMobileDevice={isMobileDevice}
@@ -280,7 +282,7 @@ export function SessionFeedback({
             size="lg"
             onClick={onReplay}
             variant="default"
-            label="Listen"
+            label={t("listen")}
             shortcut="r"
             icon={<Volume2 className="size-4" />}
             isMobileDevice={isMobileDevice}
@@ -289,7 +291,7 @@ export function SessionFeedback({
             size="lg"
             onClick={onNext}
             variant="default"
-            label="Next Word"
+            label={t("nextWord")}
             shortcut="enter"
             icon={<ArrowRight className="size-3.5" />}
             isMobileDevice={isMobileDevice}
@@ -305,7 +307,7 @@ export function SessionFeedback({
       <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200 w-full">
         <div className="flex items-center gap-2 text-warning">
           <AlertCircle className="size-4" />
-          <span className="font-semibold text-sm">Typo!</span>
+          <span className="font-semibold text-sm">{t("typo")}</span>
         </div>
         {lastUserInput && resultCorrectAnswer && (
           <TypoDiff user={lastUserInput} correct={resultCorrectAnswer} />
@@ -316,7 +318,7 @@ export function SessionFeedback({
               size="lg"
               onClick={onPrev}
               variant="outline"
-              label="Prev Word"
+              label={t("prevWord")}
               shortcut="b"
               icon={<ArrowLeft className="size-3.5" />}
               isMobileDevice={isMobileDevice}
@@ -326,7 +328,7 @@ export function SessionFeedback({
             size="lg"
             onClick={onReplay}
             variant="default"
-            label="Listen"
+            label={t("listen")}
             shortcut="r"
             icon={<Volume2 className="size-4" />}
             isMobileDevice={isMobileDevice}
@@ -335,7 +337,7 @@ export function SessionFeedback({
             size="lg"
             onClick={onNext}
             variant="default"
-            label="Next Word"
+            label={t("nextWord")}
             shortcut="enter"
             icon={<ArrowRight className="size-3.5" />}
             isMobileDevice={isMobileDevice}
@@ -353,10 +355,10 @@ export function SessionFeedback({
           <div className="flex flex-col items-center gap-1 mb-2 animate-in fade-in duration-200">
             <div className="flex items-center gap-2 text-warning">
               <AlertCircle className="size-4" />
-              <span className="font-semibold text-sm">Close!</span>
+              <span className="font-semibold text-sm">{t("close")}</span>
             </div>
             <span className="text-xs md:text-sm text-warning font-medium">
-              It differs by <strong className="font-extrabold">{diffCount} {diffCount === 1 ? 'letter' : 'letters'}</strong> from the correct answer.
+              {t("diffCountDesc").replace("{count}", String(diffCount)).replace("{label}", diffCount === 1 ? t("letter") : t("letters"))}
             </span>
           </div>
         )}
@@ -366,7 +368,7 @@ export function SessionFeedback({
               size="lg"
               onClick={onPrev}
               variant="outline"
-              label="Prev Word"
+              label={t("prevWord")}
               shortcut="b"
               icon={<ArrowLeft className="size-3.5" />}
               isMobileDevice={isMobileDevice}
@@ -376,7 +378,7 @@ export function SessionFeedback({
             variant="default"
             size="lg"
             onClick={onShowHint}
-            label="Show Hint"
+            label={t("showHint")}
             shortcut="enter"
             icon={<Eye className="size-4" />}
             isMobileDevice={isMobileDevice}
@@ -433,7 +435,7 @@ export function SessionFeedback({
               size="lg"
               onClick={onSubmitJumbled}
               disabled={placedLetters.length !== jumbledLetters.length}
-              label="Submit"
+              label={t("submit")}
               shortcut="enter"
               icon={<Send className="size-4" />}
               isMobileDevice={isMobileDevice}
@@ -442,13 +444,13 @@ export function SessionFeedback({
               variant="destructive"
               size="lg"
               onClick={onShowFinalAnswer}
-              label="Show Answer"
+              label={t("showAnswer")}
               icon={<Eye className="size-4" />}
               isMobileDevice={isMobileDevice}
             />
           </div>
           <p className="text-[10px] text-muted-foreground/50">
-            {status === "jumbled_incorrect" ? "Order is incorrect. Try again or show answer." : "Arrange all letters to submit, or show answer directly"}
+            {status === "jumbled_incorrect" ? t("jumbledIncorrectDesc") : t("jumbledDesc")}
           </p>
         </div>
       </div>
@@ -459,7 +461,7 @@ export function SessionFeedback({
     return (
       <div className="flex flex-col items-center gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200 w-full">
         <p className="text-sm text-muted-foreground">
-          {"The answer is: "}
+          {t("theAnswerIs")}
           <strong className="text-foreground font-semibold tracking-wide">{currentWord.answer}</strong>
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2">
@@ -468,7 +470,7 @@ export function SessionFeedback({
               size="lg"
               onClick={onPrev}
               variant="outline"
-              label="Prev Word"
+              label={t("prevWord")}
               shortcut="b"
               icon={<ArrowLeft className="size-3.5" />}
               isMobileDevice={isMobileDevice}
@@ -478,7 +480,7 @@ export function SessionFeedback({
             size="lg"
             onClick={onReplay}
             variant="default"
-            label="Listen"
+            label={t("listen")}
             shortcut="r"
             icon={<Volume2 className="size-4" />}
             isMobileDevice={isMobileDevice}
@@ -487,7 +489,7 @@ export function SessionFeedback({
             size="lg"
             onClick={onNext}
             variant="default"
-            label="Next Word"
+            label={t("nextWord")}
             shortcut="enter"
             icon={<ArrowRight className="size-3.5" />}
             isMobileDevice={isMobileDevice}
@@ -505,7 +507,7 @@ export function SessionFeedback({
           size="lg"
           onClick={onSubmit}
           disabled={status === "validating"}
-          label="Submit"
+          label={t("submit")}
           shortcut="enter"
           icon={<Send className="size-4" />}
           isMobileDevice={isMobileDevice}

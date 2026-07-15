@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '@/components/theme-provider'
+import { LanguageProvider } from '@/lib/contexts/LanguageContext'
 import './globals.css'
 
 const _inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -45,7 +46,9 @@ export default function RootLayout({
     <html lang="en" className={`${_inter.variable} ${_spaceGrotesk.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
         </ThemeProvider>
         <Toaster />
         <Analytics />

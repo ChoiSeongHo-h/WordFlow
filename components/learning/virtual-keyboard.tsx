@@ -36,9 +36,12 @@ export function VirtualKeyboard({ onKeyPress, status, disabled = false }: Virtua
         key={key}
         type="button"
         disabled={isCharDisabled}
-        // Prevent default pointerdown behavior to stop input blur/refocus flicker
-        onPointerDown={(e) => e.preventDefault()}
-        onClick={() => onKeyPress(key)}
+        // Use onPointerDown instead of onClick for zero-latency mobile typing
+        // This prevents iOS Safari from dropping or duplicating keys during rapid multi-touch typing
+        onPointerDown={(e) => {
+          e.preventDefault()
+          onKeyPress(key)
+        }}
         className={cn(
           "flex h-10 items-center justify-center rounded-md font-medium text-sm transition-all duration-100 select-none",
           "active:scale-95 touch-none",

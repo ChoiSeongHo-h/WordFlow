@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Zap, Lock, CreditCard, LogOut, CheckCircle2, Volume2, Play, Palette } from "lucide-react"
+import { ArrowLeft, Zap, Lock, CreditCard, LogOut, CheckCircle2, Volume2, Play, Palette, Keyboard } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const [voiceSpeed, setVoiceSpeed] = React.useState(1.0)
   const [voiceURI, setVoiceURI] = React.useState("system-default")
   const [voices, setVoices] = React.useState<SpeechSynthesisVoice[]>([])
+  const [keyboardHeight, setKeyboardHeight] = React.useState(200)
 
   React.useEffect(() => {
     // Decode user email from token
@@ -53,8 +54,10 @@ export default function SettingsPage() {
     // Load saved settings
     const speed = localStorage.getItem(`wordflow-voice-speed-${email}`)
     const uri = localStorage.getItem(`wordflow-voice-uri-${email}`)
+    const kbHeight = localStorage.getItem(`wordflow-keyboard-height-${email}`)
     if (speed) setVoiceSpeed(parseFloat(speed))
     if (uri) setVoiceURI(uri)
+    if (kbHeight) setKeyboardHeight(parseInt(kbHeight, 10))
 
     // Populate voices
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -318,6 +321,39 @@ export default function SettingsPage() {
                     <SelectItem value="system">System Default</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Keyboard Settings Card */}
+          <Card className="border-border/40 shadow-sm bg-card/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="border-b border-border/20 bg-muted/20 pb-4">
+              <div className="flex items-center gap-2">
+                <Keyboard className="size-4 text-primary" />
+                <CardTitle className="text-lg">Keyboard Settings</CardTitle>
+              </div>
+              <CardDescription>Customize the virtual keyboard height for comfortable typing.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="keyboard-height">Keyboard Height ({keyboardHeight}px)</Label>
+                  <span className="text-xs text-muted-foreground">160px (Small) - 300px (Large)</span>
+                </div>
+                <div className="pt-2">
+                  <Slider
+                    id="keyboard-height"
+                    value={[keyboardHeight]}
+                    min={160}
+                    max={300}
+                    step={10}
+                    onValueChange={(val) => {
+                      const height = val[0]
+                      setKeyboardHeight(height)
+                      localStorage.setItem(`wordflow-keyboard-height-${userEmail}`, height.toString())
+                    }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

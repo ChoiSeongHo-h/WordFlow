@@ -8,9 +8,10 @@ interface VirtualKeyboardProps {
   onKeyPress: (key: string) => void
   status: string
   disabled?: boolean
+  keyboardHeight?: number
 }
 
-export function VirtualKeyboard({ onKeyPress, status, disabled = false }: VirtualKeyboardProps) {
+export function VirtualKeyboard({ onKeyPress, status, disabled = false, keyboardHeight = 200 }: VirtualKeyboardProps) {
   const row1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"]
   const row2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"]
   const row3 = ["Clear", "z", "x", "c", "v", "b", "n", "m", "Backspace"]
@@ -43,7 +44,7 @@ export function VirtualKeyboard({ onKeyPress, status, disabled = false }: Virtua
           onKeyPress(key)
         }}
         className={cn(
-          "flex h-10 items-center justify-center rounded-md font-medium text-sm transition-all duration-100 select-none",
+          "flex h-full min-h-0 items-center justify-center rounded-md font-medium text-sm transition-all duration-100 select-none",
           "active:scale-95 touch-none",
           isSpecial 
             ? "bg-muted text-muted-foreground hover:bg-muted/80 active:bg-muted-foreground active:text-muted"
@@ -61,17 +62,20 @@ export function VirtualKeyboard({ onKeyPress, status, disabled = false }: Virtua
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto p-2 bg-background border-t flex flex-col gap-1.5 animate-in slide-in-from-bottom-5 duration-300">
-      <div className="flex justify-center gap-1 w-full">
+    <div 
+      className="w-full max-w-lg mx-auto p-2 bg-background border-t flex flex-col gap-1.5 animate-in slide-in-from-bottom-5 duration-300"
+      style={{ height: `${keyboardHeight}px` }}
+    >
+      <div className="flex justify-center gap-1 w-full flex-1">
         {row1.map(renderKey)}
       </div>
-      <div className="flex justify-center gap-1 w-full px-[5%]">
+      <div className="flex justify-center gap-1 w-full px-[5%] flex-1">
         {row2.map(renderKey)}
       </div>
-      <div className="flex justify-center gap-1 w-full">
+      <div className="flex justify-center gap-1 w-full flex-1">
         {row3.map(renderKey)}
       </div>
-      <div className="flex justify-center gap-1 w-full">
+      <div className="flex justify-center gap-1 w-full flex-1">
         {row4.map(renderKey)}
       </div>
     </div>

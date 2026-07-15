@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { X, Loader2, Sun, Moon } from "lucide-react"
+import { X, Loader2, Sun, Moon, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
@@ -14,6 +14,22 @@ import { SentenceInput } from "@/components/learning/sentence-input"
 import { SessionFeedback } from "@/components/learning/session-feedback" 
 import { SessionComplete } from "@/components/learning/session-complete"
 import { VirtualKeyboard } from "@/components/learning/virtual-keyboard"
+import { Slider } from "@/components/ui/slider"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface LearningSessionProps {
   deckId: string
@@ -24,7 +40,22 @@ interface LearningSessionProps {
 export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningSessionProps) {
   const router = useRouter()
   const session = useLearningSession(deckId, totalQuestions)
-  const { setTheme, resolvedTheme, mounted } = useUserTheme()
+  const { setTheme, theme, resolvedTheme, mounted, userEmail } = useUserTheme()
+  const [keyboardHeight, setKeyboardHeight] = useState(200)
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0)
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && userEmail) {
+      const savedHeight = localStorage.getItem(`wordflow-keyboard-height-${userEmail}`)
+      if (savedHeight) {
+        setKeyboardHeight(parseInt(savedHeight, 10))
+      }
+      const savedSpeed = localStorage.getItem(`wordflow-voice-speed-${userEmail}`)
+      if (savedSpeed) {
+        setVoiceSpeed(parseFloat(savedSpeed))
+      }
+    }
+  }, [userEmail])
 
   useEffect(() => {
     if (session.isConflict) {
@@ -577,23 +608,87 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="rounded-full hover:bg-accent"
-            aria-label="Toggle Theme"
-          >
-            {mounted ? (
-              resolvedTheme === "dark" ? (
-                <Sun className="size-5 text-amber-500 transition-all hover:scale-110" />
-              ) : (
-                <Moon className="size-5 text-indigo-900 dark:text-indigo-400 transition-all hover:scale-110" />
-              )
-            ) : (
-              <span className="size-5" />
-            )}
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full hover:bg-accent"
+                aria-label="Open Settings"
+              >
+                <Settings className="size-5 text-muted-foreground transition-all hover:scale-110" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Session Settings</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
+                {/* 1. Theme Settings */}
+                <div className="space-y-2">
+                  <Label htmlFor="session-theme-select">App Theme</Label>
+                  <Select
+                    value={mounted ? theme : "system"}
+                    onValueChange={(val) => setTheme(val)}
+                  >
+                    <SelectTrigger id="session-theme-select" className="w-full bg-background/50">
+                      <SelectValue placeholder="Select theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Light Mode</SelectItem>
+                      <SelectItem value="dark">Dark Mode</SelectItem>
+                      <SelectItem value="system">System Default</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 2. TTS Voice Speed Settings */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="session-voice-speed">Voice Speed ({voiceSpeed.toFixed(1)}x)</Label>
+                    <span className="text-xs text-muted-foreground">0.5x (Slow) - 2.0x (Fast)</span>
+                  </div>
+                  <div className="pt-1">
+                    <Slider
+                      id="session-voice-speed"
+                      value={[voiceSpeed]}
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      onValueChange={(val) => {
+                        const speed = val[0]
+                        setVoiceSpeed(speed)
+                        localStorage.setItem(`wordflow-voice-speed-${userEmail}`, speed.toString())
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Keyboard Height Settings */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="session-keyboard-height">Keyboard Height ({keyboardHeight}px)</Label>
+                    <span className="text-xs text-muted-foreground">160px (Small) - 300px (Large)</span>
+                  </div>
+                  <div className="pt-1">
+                    <Slider
+                      id="session-keyboard-height"
+                      value={[keyboardHeight]}
+                      min={160}
+                      max={300}
+                      step={10}
+                      onValueChange={(val) => {
+                        const height = val[0]
+                        setKeyboardHeight(height)
+                        localStorage.setItem(`wordflow-keyboard-height-${userEmail}`, height.toString())
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
             <X className="size-5" />
           </Button>
@@ -702,6 +797,7 @@ export function LearningSession({ deckId, deckTitle, totalQuestions }: LearningS
           onKeyPress={handleVirtualKeyPress}
           status={session.status}
           disabled={session.status === "validating"}
+          keyboardHeight={keyboardHeight}
         />
       )}
 

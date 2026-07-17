@@ -68,6 +68,7 @@ export const en = {
 
   // Social Auth
   continueWithGoogle: "Continue with Google",
+  continueWithKakao: "Continue with Kakao",
   apple: "Apple",
   githubLabel: "GitHub",
 

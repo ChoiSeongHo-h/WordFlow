@@ -52,7 +52,7 @@ export default function DashboardPage() {
       }
     }
     loadData()
-  }, [])
+  }, [router])
 
   // Persist goal changes
   const handleGoalChange = (newGoal: number) => {

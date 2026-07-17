@@ -389,3 +389,50 @@ export async function verifyAnswer(wordId: string, userInput: string): Promise<V
   }
   return { isCorrect: false }; 
 }
+
+export interface OAuthUrls {
+  kakao: string;
+  google: string;
+}
+
+export async function getOAuthUrls(): Promise<OAuthUrls> {
+  const res = await fetch(`${API_BASE_URL}/OAuth/urls`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch OAuth URLs");
+  }
+  return await res.json();
+}
+
+export async function loginWithKakao(code: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/OAuth/kakao?code=${code}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Kakao login failed");
+  }
+  const data = await res.json();
+  if (data.accessToken) setAuthToken(data.accessToken);
+  if (data.refreshToken) setRefreshToken(data.refreshToken);
+  return {
+    success: true,
+    user: { email: "" },
+    token: data.accessToken,
+    refreshToken: data.refreshToken
+  };
+}
+
+export async function loginWithGoogle(code: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/OAuth/google?code=${code}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Google login failed");
+  }
+  const data = await res.json();
+  if (data.accessToken) setAuthToken(data.accessToken);
+  if (data.refreshToken) setRefreshToken(data.refreshToken);
+  return {
+    success: true,
+    user: { email: "" },
+    token: data.accessToken,
+    refreshToken: data.refreshToken
+  };
+}

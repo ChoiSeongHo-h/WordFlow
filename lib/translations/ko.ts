@@ -70,6 +70,7 @@ export const ko: typeof en = {
 
   // Social Auth
   continueWithGoogle: "Google로 계속하기",
+  continueWithKakao: "Kakao로 계속하기",
   apple: "Apple",
   githubLabel: "GitHub",
 

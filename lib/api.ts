@@ -173,7 +173,7 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
     if (!isRefreshing) {
       isRefreshing = true;
       try {
-        const refreshRes = await fetch(`${API_BASE_URL}/token`, {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/token`, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
           body: refreshToken
